@@ -12,6 +12,9 @@ import {
 } from "../src/game-engine/index.ts";
 import { BrowserStorageService } from "../src/storage/index.ts";
 
+const strongQuestion =
+  "I’m at Five Points. I need to reach my Midtown interview in 18 minutes with 9% phone battery. Give me two reliable routes and recommend one.";
+
 class MemoryLocalStorage {
   values = new Map();
   writeCounts = new Map();
@@ -66,7 +69,7 @@ function reachCompletionStage(game, playerId) {
   const challenge = reachChallenge(game, playerId);
   const reflection = submit(game, playerId, challenge, {
     type: "submit",
-    input: "clear",
+    input: strongQuestion,
   });
   const reward = submit(game, playerId, reflection, { type: "reflect" });
   game.completeStage(playerId);
@@ -134,6 +137,7 @@ test("progression rejects a known scenario whose prerequisites are unmet", () =>
     {
       id: lockedId,
       title: "Locked Engine Fixture",
+      literacySkillId: "locked-skill",
       prerequisiteScenarioIds: ["required-test"],
       nextScenarioIds: [],
       stageIds: ["intro", "complete"],
@@ -163,7 +167,7 @@ test("the authored scenario follows its configured forward stage sequence", asyn
   assert.equal(challenge.session.currentStageId, "challenge");
   const reflection = submit(game, playerId, challenge, {
     type: "submit",
-    input: "clear",
+    input: strongQuestion,
   });
   assert.equal(reflection.session.currentStageId, "reflection");
   const reward = submit(game, playerId, reflection, { type: "reflect" });
@@ -201,9 +205,10 @@ test("scenario completion grants rewards and unlocks declarative next progress",
       PLACEHOLDER_NEXT_SCENARIO_ID,
     ),
   );
-  assert.equal(completed.rewards.xp, 10);
-  assert.equal(completed.rewards.aPoints, 5);
-  assert.deepEqual(completed.rewards.badgeIds, ["engine-test-complete"]);
+  assert.equal(completed.rewards.xp, 100);
+  assert.equal(completed.rewards.aPoints, 100);
+  assert.deepEqual(completed.rewards.badgeIds, ["better-questions"]);
+  assert.ok(completed.progression.unlockedSkillIds.includes("ask-better"));
 });
 
 test("completion rewards cannot be granted twice", async () => {
@@ -218,8 +223,8 @@ test("completion rewards cannot be granted twice", async () => {
     ScenarioAlreadyCompletedError,
   );
   const snapshot = game.getGameSnapshot(playerId);
-  assert.equal(snapshot.rewards.xp, 10);
-  assert.equal(snapshot.rewards.aPoints, 5);
+  assert.equal(snapshot.rewards.xp, 100);
+  assert.equal(snapshot.rewards.aPoints, 100);
 });
 
 test("game snapshots contain only the requested player's state", async () => {

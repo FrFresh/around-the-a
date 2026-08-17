@@ -255,6 +255,7 @@ export function toProgressionScenario(
   return {
     id: definition.id,
     title: definition.title,
+    literacySkillId: definition.literacySkillId,
     prerequisiteScenarioIds: definition.prerequisiteScenarioIds,
     nextScenarioIds: definition.nextScenarioIds,
     stageIds: definition.stages.map((stage) => stage.id),

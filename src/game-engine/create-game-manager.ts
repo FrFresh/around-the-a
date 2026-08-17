@@ -2,6 +2,7 @@ import { PlaceholderEvaluator } from "../evaluation/index.ts";
 import { GameEngine } from "../game/engine.ts";
 import {
   migrateLegacySave,
+  migratePhaseFourFixtureSaves,
   PlayerGameStorage,
   PlayerManager,
   type PlayerManagerOptions,
@@ -9,14 +10,16 @@ import {
 } from "../player/index.ts";
 import { RewardManager } from "../rewards/index.ts";
 import {
-  DeterministicTestEvaluator,
   EvaluatorRegistry,
-  PHASE_FOUR_EVALUATOR_ID,
   ScenarioEngine,
   ScenarioManager,
   ScenarioRegistry,
-  phaseFourTestScenario,
 } from "../scenario-engine/index.ts";
+import {
+  AskBetterEvaluator,
+  ASK_BETTER_EVALUATOR_ID,
+} from "../evaluators/ask-better.ts";
+import { fivePointsScenarioDefinition } from "../scenarios/index.ts";
 import { StorageManager, type StorageService } from "../storage/index.ts";
 import { GameOrchestrator } from "./game-orchestrator.ts";
 import { GameManager } from "./game-manager.ts";
@@ -39,12 +42,9 @@ export async function createGameManager({
   const gameStorage = new PlayerGameStorage(players);
   const gameplay = new GameEngine(gameStorage);
   const evaluatorRegistry = new EvaluatorRegistry();
-  evaluatorRegistry.register(
-    PHASE_FOUR_EVALUATOR_ID,
-    new DeterministicTestEvaluator(),
-  );
+  evaluatorRegistry.register(ASK_BETTER_EVALUATOR_ID, new AskBetterEvaluator());
   const scenarioRegistry = new ScenarioRegistry(evaluatorRegistry);
-  scenarioRegistry.register(phaseFourTestScenario);
+  scenarioRegistry.register(fivePointsScenarioDefinition);
   const scenarioEngine = new ScenarioEngine(
     scenarioRegistry,
     evaluatorRegistry,
@@ -71,6 +71,7 @@ export async function createGameManager({
     orchestrator,
     migrateLegacySave: () => {
       migrateLegacySave(storage, players, gameStorage);
+      migratePhaseFourFixtureSaves(players);
     },
   });
 

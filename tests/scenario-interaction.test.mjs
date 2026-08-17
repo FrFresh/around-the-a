@@ -6,6 +6,9 @@ import {
 } from "../src/game-engine/index.ts";
 import { BrowserStorageService } from "../src/storage/index.ts";
 
+const strongQuestion =
+  "I’m at Five Points. I need to reach my Midtown interview in 18 minutes with 9% phone battery. Give me two reliable routes and recommend one.";
+
 class MemoryLocalStorage {
   values = new Map();
   get length() {
@@ -61,8 +64,8 @@ test("snapshot exposes only the authored dialogue needed by the renderer", async
   const dialogue = act(game, playerId, started, { type: "advance" });
 
   assert.equal(dialogue.currentStage.type, "dialogue");
-  assert.equal(dialogue.currentStage.speaker, "Test Guide");
-  assert.equal(dialogue.scenarioContent.title, "Scenario Engine Test");
+  assert.equal(dialogue.currentStage.speaker, "Maya");
+  assert.equal(dialogue.scenarioContent.title, "Ask Better");
   assert.ok(!("stages" in dialogue.scenarioContent));
 });
 
@@ -77,7 +80,7 @@ test("failed evaluation routes through feedback, reveals hints, and retries", as
   });
   assert.equal(failed.currentStage.type, "feedback");
   assert.equal(failed.currentStage.evaluation.passed, false);
-  assert.equal(failed.currentStage.availableHint, "Try a more precise value.");
+  assert.match(failed.currentStage.availableHint, /destination is clear/i);
   assert.equal(failed.scenario.attempts, 1);
 
   const retry = act(game, playerId, failed, { type: "advance" });
@@ -86,10 +89,7 @@ test("failed evaluation routes through feedback, reveals hints, and retries", as
     type: "submit",
     input: "still vague",
   });
-  assert.equal(
-    failedAgain.currentStage.availableHint,
-    "The deterministic value is clear.",
-  );
+  assert.match(failedAgain.currentStage.availableHint, /goal, Five Points/i);
   assert.equal(failedAgain.scenario.attemptsByStageId.challenge, 2);
 });
 
@@ -100,12 +100,18 @@ test("successful evaluation routes to reflection using a standardized result", a
 
   const reflection = act(game, playerId, challenge, {
     type: "submit",
-    input: "clear",
+    input: strongQuestion,
   });
 
   assert.equal(reflection.currentStage.type, "reflection");
   assert.equal(reflection.scenario.latestEvaluation.passed, true);
-  assert.equal(reflection.scenario.latestEvaluation.score, 1);
+  assert.equal(reflection.scenario.latestEvaluation.score, 4);
+  assert.deepEqual(reflection.scenario.latestEvaluation.dimensions, {
+    goal: true,
+    context: true,
+    constraints: true,
+    desiredOutput: true,
+  });
   assert.equal(typeof reflection.scenario.latestEvaluation.feedback, "string");
 });
 
@@ -115,18 +121,18 @@ test("reflection is lightweight and rewards route only through the orchestrator"
   const challenge = reachChallenge(game, playerId);
   const reflection = act(game, playerId, challenge, {
     type: "submit",
-    input: "clear",
+    input: strongQuestion,
   });
   const reward = act(game, playerId, reflection, {
     type: "reflect",
-    response: "Specific input made the result deterministic.",
+    response: "The details made the route useful.",
   });
 
   assert.equal(reward.currentStage.type, "reward");
   assert.equal(reward.rewards.xp, 0);
   assert.equal(
     reward.scenario.reflectionResponses.reflection,
-    "Specific input made the result deterministic.",
+    "The details made the route useful.",
   );
 
   const completeStage = act(game, playerId, reward, { type: "advance" });
@@ -134,7 +140,9 @@ test("reflection is lightweight and rewards route only through the orchestrator"
   assert.equal(completeStage.rewards.xp, 0);
 
   const completed = game.completeScenario(playerId);
-  assert.equal(completed.rewards.xp, 10);
+  assert.equal(completed.rewards.xp, 100);
+  assert.equal(completed.rewards.aPoints, 100);
+  assert.ok(completed.progression.unlockedSkillIds.includes("ask-better"));
   assert.ok(
     completed.progression.completedScenarioIds.includes(
       PLACEHOLDER_SCENARIO_ID,
@@ -158,9 +166,9 @@ test("attempts persist across refresh and remain isolated by player", async () =
     storage: new BrowserStorageService(storage),
   });
   assert.equal(refreshed.getGameSnapshot(playerA).scenario.attempts, 1);
-  assert.equal(
+  assert.match(
     refreshed.getGameSnapshot(playerA).currentStage.availableHint,
-    "Try a more precise value.",
+    /destination is clear/i,
   );
   assert.equal(refreshed.getGameSnapshot(playerB).scenario.attempts, 0);
 });

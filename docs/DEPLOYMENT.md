@@ -22,6 +22,11 @@ npm run dev
 
 Open `http://localhost:3000`.
 
+Player-facing routes:
+
+- `/` — the Around the A playable cartridge
+- `/dev/engine` — development-only engine diagnostic
+
 The default local command uses Vinext's Node development runtime. This avoids starting Cloudflare's local `workerd` emulator, which requires macOS 13.5 or newer. On a supported operating system, Cloudflare-specific local behavior can be tested with:
 
 ```bash
@@ -71,7 +76,7 @@ Authenticate locally with `npx wrangler login`, then run:
 npm run build
 npx wrangler versions upload \
   --config dist/server/wrangler.json \
-  --preview-alias milestone-preview-deployment
+  --preview-alias milestone-first-playable
 ```
 
 This uploads a previewable Worker version without changing production traffic.
