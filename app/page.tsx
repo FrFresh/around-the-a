@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { PlayerSelector } from "../src/components/PlayerSelector";
 import {
   createBrowserGameManager,
+  type ApplicationSnapshot,
   type GameManager,
-  type GameSnapshot,
 } from "../src/game-engine";
 import { defaultPlayer } from "../src/game/player-state";
 import type { EvaluationResult } from "../src/game/types";
@@ -74,7 +74,7 @@ const dimensions = [
 
 export default function Home() {
   const [game, setGame] = useState<GameManager | null>(null);
-  const [snapshot, setSnapshot] = useState<GameSnapshot>({
+  const [snapshot, setSnapshot] = useState<ApplicationSnapshot>({
     players: [],
     activeSave: null,
     state: defaultPlayer,

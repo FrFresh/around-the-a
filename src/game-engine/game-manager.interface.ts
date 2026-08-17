@@ -6,32 +6,44 @@ import type {
   PlayerId,
   PlayerImportOptions,
   SaveData,
+  ScenarioId,
 } from "../types/index.ts";
+import type { PlayerAction } from "./game-orchestrator.ts";
+import type { GameSnapshot } from "./game-snapshot.ts";
 
-export interface GameSnapshot {
+/** Compatibility snapshot for the existing prototype application shell. */
+export interface ApplicationSnapshot {
   players: Player[];
   activeSave: SaveData | null;
   state: PlayerState;
 }
 
 export interface SubmissionResult {
-  snapshot: GameSnapshot;
+  snapshot: ApplicationSnapshot;
   evaluation: EvaluationResult;
   completed: boolean;
 }
 
 export interface IGameManager extends InitializableManager {
-  getSnapshot(): GameSnapshot;
-  createPlayer(displayName: string): GameSnapshot;
+  getSnapshot(): ApplicationSnapshot;
+  getGameSnapshot(playerId: PlayerId): GameSnapshot;
+  startGame(playerId: PlayerId): GameSnapshot;
+  resumeGame(playerId: PlayerId): GameSnapshot;
+  pauseGame(playerId: PlayerId): GameSnapshot;
+  loadScenario(playerId: PlayerId, scenarioId: ScenarioId): GameSnapshot;
+  submitAction(playerId: PlayerId, action: PlayerAction): GameSnapshot;
+  completeStage(playerId: PlayerId): GameSnapshot;
+  completeScenario(playerId: PlayerId): GameSnapshot;
+  createPlayer(displayName: string): ApplicationSnapshot;
   loadPlayer(id: PlayerId): SaveData | null;
-  savePlayer(save: SaveData): GameSnapshot;
+  savePlayer(save: SaveData): ApplicationSnapshot;
   exportPlayer(id: PlayerId): string;
   importPlayer(
     serializedSave: string,
     options?: PlayerImportOptions,
-  ): GameSnapshot;
-  switchPlayer(id: PlayerId): GameSnapshot;
-  deletePlayer(id: PlayerId): GameSnapshot;
+  ): ApplicationSnapshot;
+  switchPlayer(id: PlayerId): ApplicationSnapshot;
+  deletePlayer(id: PlayerId): ApplicationSnapshot;
   submitPlayerResponse(
     scenarioId: string,
     input: string,

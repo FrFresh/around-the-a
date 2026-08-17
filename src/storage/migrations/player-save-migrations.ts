@@ -9,7 +9,7 @@ import {
 } from "../player-save-validator.ts";
 import { StorageMigrationError } from "../storage-errors.ts";
 
-export const CURRENT_PLAYER_SAVE_SCHEMA_VERSION = 2;
+export const CURRENT_PLAYER_SAVE_SCHEMA_VERSION = 3;
 
 type Migration = (save: unknown) => unknown;
 
@@ -19,6 +19,7 @@ type Migration = (save: unknown) => unknown;
  */
 const migrations: Readonly<Record<number, Migration>> = {
   1: migrateVersion1ToVersion2,
+  2: migrateVersion2ToVersion3,
 };
 
 export interface PlayerSaveMigrationResult {
@@ -89,13 +90,55 @@ function migrateVersion1ToVersion2(value: unknown): PlayerSaveEnvelope {
   if (!isRecord(value) || value.schemaVersion !== 1) {
     throw new StorageMigrationError("Schema version 1 player save is invalid.");
   }
-  const data: unknown = {
+  const data = {
     player: value.player,
     progress: value.progress,
     session: value.session,
+  } as unknown as PlayerSaveData;
+  return {
+    schemaVersion: 2,
+    playerId: data.player.id,
+    savedAt: data.progress.updatedAt,
+    data,
   };
-  assertPlayerSaveData(data);
-  return createPlayerSaveEnvelope(data, data.progress.updatedAt);
+}
+
+function migrateVersion2ToVersion3(value: unknown): PlayerSaveEnvelope {
+  if (!isRecord(value) || value.schemaVersion !== 2 || !isRecord(value.data)) {
+    throw new StorageMigrationError("Schema version 2 player save is invalid.");
+  }
+  const data = value.data;
+  if (
+    !isRecord(data.player) ||
+    typeof data.player.id !== "string" ||
+    !isRecord(data.progress) ||
+    !isRecord(data.session)
+  ) {
+    throw new StorageMigrationError("Schema version 2 player data is invalid.");
+  }
+  const playerId = data.player.id as PlayerId;
+  const updatedAt =
+    typeof data.session.lastActiveAt === "string"
+      ? data.session.lastActiveAt
+      : value.savedAt;
+  const migratedData: PlayerSaveData = {
+    player: data.player as unknown as PlayerSaveData["player"],
+    progress: {
+      ...(data.progress as unknown as PlayerSaveData["progress"]),
+      scenarioStates: {},
+    },
+    session: {
+      id: `migrated-session:${playerId}`,
+      playerId,
+      status: "not_started",
+      currentScenarioId: null,
+      currentStageId: null,
+      startedAt: null,
+      updatedAt:
+        typeof updatedAt === "string" ? updatedAt : new Date(0).toISOString(),
+    },
+  };
+  return createPlayerSaveEnvelope(migratedData, migratedData.session.updatedAt);
 }
 
 function readSchemaVersion(value: unknown): number {

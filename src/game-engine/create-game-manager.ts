@@ -10,7 +10,10 @@ import {
 import { RewardManager } from "../rewards/index.ts";
 import { ScenarioManager } from "../scenario-engine/index.ts";
 import { StorageManager, type StorageService } from "../storage/index.ts";
+import { GameOrchestrator } from "./game-orchestrator.ts";
 import { GameManager } from "./game-manager.ts";
+import { placeholderScenario } from "./placeholder-scenario.ts";
+import { ProgressionEngine } from "./progression-engine.ts";
 
 export interface CreateGameManagerOptions {
   storage: StorageService;
@@ -28,6 +31,10 @@ export async function createGameManager({
   );
   const gameStorage = new PlayerGameStorage(players);
   const gameplay = new GameEngine(gameStorage);
+  const progression = new ProgressionEngine([placeholderScenario]);
+  const orchestrator = new GameOrchestrator(players, progression, {
+    now: playerOptions?.now,
+  });
   const scenarios = new ScenarioManager();
   const rewards = new RewardManager();
   const evaluator = new PlaceholderEvaluator();
@@ -38,6 +45,7 @@ export async function createGameManager({
     evaluator,
     players,
     gameplay,
+    orchestrator,
     migrateLegacySave: () => {
       migrateLegacySave(storage, players, gameStorage);
     },

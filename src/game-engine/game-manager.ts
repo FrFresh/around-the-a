@@ -9,9 +9,12 @@ import type {
   PlayerId,
   PlayerImportOptions,
   SaveData,
+  ScenarioId,
 } from "../types/index.ts";
+import type { GameOrchestrator, PlayerAction } from "./game-orchestrator.ts";
+import type { GameSnapshot } from "./game-snapshot.ts";
 import type {
-  GameSnapshot,
+  ApplicationSnapshot,
   IGameManager,
   SubmissionResult,
 } from "./game-manager.interface.ts";
@@ -23,6 +26,7 @@ export interface GameManagerDependencies {
   evaluator: IEvaluator;
   players?: PlayerManager;
   gameplay?: GameEngine;
+  orchestrator?: GameOrchestrator;
   migrateLegacySave?: () => void;
 }
 
@@ -38,7 +42,7 @@ export class GameManager extends BaseManager implements IGameManager {
     this.dependencies.migrateLegacySave?.();
   }
 
-  getSnapshot(): GameSnapshot {
+  getSnapshot(): ApplicationSnapshot {
     const { players, gameplay } = this.requirePlayerSystem();
     return {
       players: players.listPlayers(),
@@ -47,7 +51,40 @@ export class GameManager extends BaseManager implements IGameManager {
     };
   }
 
-  createPlayer(displayName: string): GameSnapshot {
+  getGameSnapshot(playerId: PlayerId): GameSnapshot {
+    return this.requireOrchestrator().getGameSnapshot(playerId);
+  }
+
+  startGame(playerId: PlayerId): GameSnapshot {
+    return this.requireOrchestrator().startGame(playerId).snapshot;
+  }
+
+  resumeGame(playerId: PlayerId): GameSnapshot {
+    return this.requireOrchestrator().resumeGame(playerId).snapshot;
+  }
+
+  pauseGame(playerId: PlayerId): GameSnapshot {
+    return this.requireOrchestrator().pauseGame(playerId).snapshot;
+  }
+
+  loadScenario(playerId: PlayerId, scenarioId: ScenarioId): GameSnapshot {
+    return this.requireOrchestrator().loadScenario(playerId, scenarioId)
+      .snapshot;
+  }
+
+  submitAction(playerId: PlayerId, action: PlayerAction): GameSnapshot {
+    return this.requireOrchestrator().submitAction(playerId, action).snapshot;
+  }
+
+  completeStage(playerId: PlayerId): GameSnapshot {
+    return this.requireOrchestrator().completeStage(playerId).snapshot;
+  }
+
+  completeScenario(playerId: PlayerId): GameSnapshot {
+    return this.requireOrchestrator().completeScenario(playerId).snapshot;
+  }
+
+  createPlayer(displayName: string): ApplicationSnapshot {
     const { players } = this.requirePlayerSystem();
     players.createPlayer(displayName);
     return this.getSnapshot();
@@ -57,7 +94,7 @@ export class GameManager extends BaseManager implements IGameManager {
     return this.requirePlayerSystem().players.loadPlayer(id);
   }
 
-  savePlayer(save: SaveData): GameSnapshot {
+  savePlayer(save: SaveData): ApplicationSnapshot {
     this.requirePlayerSystem().players.savePlayer(save);
     return this.getSnapshot();
   }
@@ -69,17 +106,17 @@ export class GameManager extends BaseManager implements IGameManager {
   importPlayer(
     serializedSave: string,
     options?: PlayerImportOptions,
-  ): GameSnapshot {
+  ): ApplicationSnapshot {
     this.requirePlayerSystem().players.importPlayer(serializedSave, options);
     return this.getSnapshot();
   }
 
-  switchPlayer(id: PlayerId): GameSnapshot {
+  switchPlayer(id: PlayerId): ApplicationSnapshot {
     this.requirePlayerSystem().players.switchPlayer(id);
     return this.getSnapshot();
   }
 
-  deletePlayer(id: PlayerId): GameSnapshot {
+  deletePlayer(id: PlayerId): ApplicationSnapshot {
     this.requirePlayerSystem().players.deletePlayer(id);
     return this.getSnapshot();
   }
@@ -106,5 +143,13 @@ export class GameManager extends BaseManager implements IGameManager {
       throw new Error("The player system is unavailable in this runtime.");
     }
     return { players, gameplay };
+  }
+
+  private requireOrchestrator(): GameOrchestrator {
+    const orchestrator = this.dependencies.orchestrator;
+    if (!orchestrator) {
+      throw new Error("Game orchestration is unavailable in this runtime.");
+    }
+    return orchestrator;
   }
 }

@@ -20,6 +20,7 @@ export interface PlayerProgress {
   inventory: Inventory;
   passport: Passport;
   scenarioAttempts: Partial<Record<ScenarioId, number>>;
+  scenarioStates: Partial<Record<ScenarioId, ScenarioState>>;
   updatedAt: ISODateString;
 }
 
@@ -38,16 +39,29 @@ export interface Passport {
   unlockedSkillIds: SkillId[];
 }
 
-export interface PlayerSession {
+export type GameSessionStatus =
+  | "not_started"
+  | "active"
+  | "paused"
+  | "completed";
+
+export interface GameSession {
+  id: string;
   playerId: PlayerId;
-  startedAt: ISODateString;
-  lastActiveAt: ISODateString;
+  status: GameSessionStatus;
+  currentScenarioId: ScenarioId | null;
+  currentStageId: ScenarioStageId | null;
+  startedAt: ISODateString | null;
+  updatedAt: ISODateString;
 }
+
+/** @deprecated Use GameSession. Retained as a source-compatible alias. */
+export type PlayerSession = GameSession;
 
 export interface PlayerSaveData {
   player: Player;
   progress: PlayerProgress;
-  session: PlayerSession;
+  session: GameSession;
 }
 
 /** Domain save data used by the game engine after persistence validation. */
@@ -70,10 +84,20 @@ export interface PlayerImportOptions {
 
 export type ScenarioStatus = "locked" | "available" | "active" | "completed";
 
+export type ScenarioStageId =
+  | "intro"
+  | "encounter"
+  | "challenge"
+  | "feedback"
+  | "reflection"
+  | "complete";
+
 export interface ScenarioState {
+  playerId: PlayerId;
   scenarioId: ScenarioId;
   status: ScenarioStatus;
-  currentStageIndex: number;
+  currentStageId: ScenarioStageId | null;
+  completedStageIds: ScenarioStageId[];
   attempts: number;
 }
 
@@ -99,9 +123,10 @@ export interface Skill {
 export interface Scenario {
   id: ScenarioId;
   title: string;
-  skillId: SkillId;
+  prerequisiteScenarioIds: ScenarioId[];
+  nextScenarioIds: ScenarioId[];
+  stageIds: ScenarioStageId[];
   reward: Reward;
-  nextScenarioId: ScenarioId | null;
 }
 
 export interface EvaluationResult {

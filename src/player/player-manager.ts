@@ -11,17 +11,21 @@ import type { PlayerStorage } from "./player-storage.interface.ts";
 
 export interface PlayerManagerOptions {
   createId?: () => string;
+  createSessionId?: () => string;
   now?: () => string;
 }
 
 export class PlayerManager {
   private readonly storage: PlayerStorage;
   private readonly createId: () => string;
+  private readonly createSessionId: () => string;
   private readonly now: () => string;
 
   constructor(storage: PlayerStorage, options: PlayerManagerOptions = {}) {
     this.storage = storage;
     this.createId = options.createId ?? (() => crypto.randomUUID());
+    this.createSessionId =
+      options.createSessionId ?? (() => crypto.randomUUID());
     this.now = options.now ?? (() => new Date().toISOString());
   }
 
@@ -41,7 +45,15 @@ export class PlayerManager {
     const save: SaveData = {
       player,
       progress: this.createProgress(id, timestamp),
-      session: { playerId: id, startedAt: timestamp, lastActiveAt: timestamp },
+      session: {
+        id: this.createSessionId(),
+        playerId: id,
+        status: "not_started",
+        currentScenarioId: null,
+        currentStageId: null,
+        startedAt: null,
+        updatedAt: timestamp,
+      },
     };
     this.storage.writePlayer(save);
     this.storage.setActivePlayerId(id);
@@ -62,7 +74,7 @@ export class PlayerManager {
     if (!save) throw new Error(`Player not found: ${id}`);
     const updated = {
       ...save,
-      session: { ...save.session, lastActiveAt: this.now() },
+      session: { ...save.session, updatedAt: this.now() },
     };
     this.storage.writePlayer(updated);
     this.storage.setActivePlayerId(id);
@@ -77,7 +89,7 @@ export class PlayerManager {
     const updated: SaveData = {
       ...structuredClone(save),
       progress: { ...save.progress, updatedAt: this.now() },
-      session: { ...save.session, lastActiveAt: this.now() },
+      session: { ...save.session, updatedAt: this.now() },
     };
     this.storage.writePlayer(updated);
     return structuredClone(updated);
@@ -117,6 +129,7 @@ export class PlayerManager {
       inventory: { items: [] },
       passport: { earnedBadgeIds: [], unlockedSkillIds: [] },
       scenarioAttempts: {},
+      scenarioStates: {},
       updatedAt: timestamp,
     };
   }

@@ -42,6 +42,7 @@ export function assertPlayerSaveData(
     !validInventory(progress.inventory) ||
     !validPassport(progress.passport) ||
     !numberRecord(progress.scenarioAttempts) ||
+    !validScenarioStates(progress.scenarioStates, playerId) ||
     !validDate(progress.updatedAt)
   ) {
     fail("Player progress fields are invalid.");
@@ -49,12 +50,62 @@ export function assertPlayerSaveData(
 
   if (
     !isRecord(session) ||
+    !nonEmptyString(session.id) ||
     session.playerId !== playerId ||
-    !validDate(session.startedAt) ||
-    !validDate(session.lastActiveAt)
+    !gameSessionStatus(session.status) ||
+    !(
+      session.currentScenarioId === null ||
+      nonEmptyString(session.currentScenarioId)
+    ) ||
+    !(
+      session.currentStageId === null || scenarioStageId(session.currentStageId)
+    ) ||
+    !(session.startedAt === null || validDate(session.startedAt)) ||
+    !validDate(session.updatedAt)
   ) {
     fail("Player session fields are invalid or use a mismatched player ID.");
   }
+}
+
+function validScenarioStates(value: unknown, playerId: PlayerId): boolean {
+  if (!isRecord(value)) return false;
+  return Object.entries(value).every(([scenarioId, state]) => {
+    if (!isRecord(state)) return false;
+    return (
+      state.playerId === playerId &&
+      state.scenarioId === scenarioId &&
+      scenarioStatus(state.status) &&
+      (state.currentStageId === null ||
+        scenarioStageId(state.currentStageId)) &&
+      Array.isArray(state.completedStageIds) &&
+      state.completedStageIds.every(scenarioStageId) &&
+      Number.isInteger(state.attempts) &&
+      (state.attempts as number) >= 0
+    );
+  });
+}
+
+function gameSessionStatus(value: unknown): boolean {
+  return ["not_started", "active", "paused", "completed"].includes(
+    value as string,
+  );
+}
+
+function scenarioStatus(value: unknown): boolean {
+  return ["locked", "available", "active", "completed"].includes(
+    value as string,
+  );
+}
+
+function scenarioStageId(value: unknown): boolean {
+  return [
+    "intro",
+    "encounter",
+    "challenge",
+    "feedback",
+    "reflection",
+    "complete",
+  ].includes(value as string);
 }
 
 export function assertPlayerSaveEnvelope(
