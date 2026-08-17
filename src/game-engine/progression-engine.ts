@@ -1,5 +1,4 @@
 import type {
-  PlayerId,
   PlayerProgress,
   Scenario,
   ScenarioId,
@@ -8,6 +7,7 @@ import type {
 import {
   ScenarioAlreadyCompletedError,
   ScenarioLockedError,
+  ScenarioOwnershipError,
   UnknownScenarioError,
 } from "./game-errors.ts";
 
@@ -87,7 +87,7 @@ export class ProgressionEngine {
     state: ScenarioState,
   ): PlayerProgress {
     if (state.playerId !== progress.playerId) {
-      throw new ScenarioLockedError(progress.playerId, scenario.id);
+      throw new ScenarioOwnershipError(progress.playerId, scenario.id);
     }
     if (progress.completedScenarioIds.includes(scenario.id)) {
       throw new ScenarioAlreadyCompletedError(progress.playerId, scenario.id);

@@ -119,7 +119,7 @@ export class PlayerManager {
     const firstScenario = "five-points-prompting" as ScenarioId;
     return {
       playerId: id,
-      currentScenarioId: firstScenario,
+      currentScenarioId: null,
       completedScenarioIds: [],
       unlockedScenarioIds: [firstScenario],
       xp: 0,

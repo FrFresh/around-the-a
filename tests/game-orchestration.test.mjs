@@ -7,12 +7,14 @@ import {
   ProgressionEngine,
   ScenarioAlreadyCompletedError,
   ScenarioLockedError,
+  ScenarioOwnershipError,
   createGameManager,
 } from "../src/game-engine/index.ts";
 import { BrowserStorageService } from "../src/storage/index.ts";
 
 class MemoryLocalStorage {
   values = new Map();
+  writeCounts = new Map();
   get length() {
     return this.values.size;
   }
@@ -30,6 +32,7 @@ class MemoryLocalStorage {
   }
   setItem(key, value) {
     this.values.set(key, String(value));
+    this.writeCounts.set(key, (this.writeCounts.get(key) ?? 0) + 1);
   }
 }
 
@@ -125,6 +128,18 @@ test("the placeholder scenario follows its configured stage sequence", async () 
   assert.equal(game.completeStage(playerId).session.currentStageId, "complete");
 });
 
+test("loading an unlocked active scenario restores its current stage", async () => {
+  const { game } = await setup();
+  const playerId = game.createPlayer("Alex").activeSave.player.id;
+  game.startGame(playerId);
+  game.completeStage(playerId);
+
+  const loaded = game.loadScenario(playerId, PLACEHOLDER_SCENARIO_ID);
+
+  assert.equal(loaded.session.currentStageId, "challenge");
+  assert.equal(loaded.scenario.currentStageId, "challenge");
+});
+
 test("scenario completion grants rewards and unlocks declarative next progress", async () => {
   const { game } = await setup();
   const playerId = game.createPlayer("Alex").activeSave.player.id;
@@ -186,4 +201,93 @@ test("game snapshots contain only the requested player's state", async () => {
   assert.equal(snapshotB.session.status, "not_started");
   assert.ok(!("players" in snapshotA));
   assert.ok(!("activeSave" in snapshotA));
+});
+
+test("meaningful transitions autosave exactly one new primary checkpoint", async () => {
+  const { game, storage } = await setup();
+  const playerId = game.createPlayer("Alex").activeSave.player.id;
+  const key = `around-the-a:player:v1:${playerId}`;
+
+  const beforeStart = storage.writeCounts.get(key);
+  game.startGame(playerId);
+  assert.equal(storage.writeCounts.get(key), beforeStart + 1);
+
+  const beforeStage = storage.writeCounts.get(key);
+  game.completeStage(playerId);
+  assert.equal(storage.writeCounts.get(key), beforeStage + 1);
+
+  const beforePause = storage.writeCounts.get(key);
+  game.pauseGame(playerId);
+  assert.equal(storage.writeCounts.get(key), beforePause + 1);
+});
+
+test("two players advance independently and switching restores exact state", async () => {
+  const { game } = await setup(new MemoryLocalStorage(), [
+    "player-a",
+    "player-b",
+  ]);
+  const playerA = game.createPlayer("Alex").activeSave.player.id;
+  const playerB = game.createPlayer("Blair").activeSave.player.id;
+
+  game.startGame(playerA);
+  game.completeStage(playerA);
+  game.startGame(playerB);
+
+  game.switchPlayer(playerA);
+  const restoredA = game.getGameSnapshot(playerA);
+  assert.equal(restoredA.session.currentStageId, "challenge");
+  assert.equal(restoredA.rewards.xp, 0);
+
+  game.switchPlayer(playerB);
+  const restoredB = game.getGameSnapshot(playerB);
+  assert.equal(restoredB.session.currentStageId, "intro");
+  assert.equal(restoredB.rewards.xp, 0);
+});
+
+test("an action carrying another player's session cannot mutate either save", async () => {
+  const { game } = await setup(new MemoryLocalStorage(), [
+    "player-a",
+    "player-b",
+  ]);
+  const playerA = game.createPlayer("Alex").activeSave.player.id;
+  const playerB = game.createPlayer("Blair").activeSave.player.id;
+  const beforeA = game.startGame(playerA);
+  const beforeB = game.startGame(playerB);
+
+  assert.throws(
+    () =>
+      game.submitAction(playerA, {
+        type: "advance",
+        sessionId: beforeB.session.id,
+        scenarioId: beforeB.session.currentScenarioId,
+      }),
+    ScenarioOwnershipError,
+  );
+
+  assert.equal(
+    game.getGameSnapshot(playerA).session.currentStageId,
+    beforeA.session.currentStageId,
+  );
+  assert.equal(
+    game.getGameSnapshot(playerB).session.currentStageId,
+    beforeB.session.currentStageId,
+  );
+});
+
+test("refresh restores the player-owned session and exact stage", async () => {
+  const storage = new MemoryLocalStorage();
+  const { game } = await setup(storage);
+  const playerId = game.createPlayer("Alex").activeSave.player.id;
+  game.startGame(playerId);
+  game.completeStage(playerId);
+  game.pauseGame(playerId);
+
+  const refreshed = await createGameManager({
+    storage: new BrowserStorageService(storage),
+  });
+  const snapshot = refreshed.getGameSnapshot(playerId);
+
+  assert.equal(snapshot.session.status, "paused");
+  assert.equal(snapshot.session.currentStageId, "challenge");
+  assert.equal(snapshot.scenario.currentStageId, "challenge");
 });

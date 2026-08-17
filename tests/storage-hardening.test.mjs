@@ -76,6 +76,37 @@ test("schema version 1 saves migrate forward and are rewritten centrally", () =>
   assert.equal(persisted.data.player.id, save.player.id);
 });
 
+test("schema version 2 saves gain player-scoped game session state", () => {
+  const localStorage = new MemoryLocalStorage();
+  const manager = createPlayerManager(localStorage);
+  const save = manager.createPlayer("Alex");
+  const legacyProgress = structuredClone(save.progress);
+  delete legacyProgress.scenarioStates;
+  const legacy = {
+    schemaVersion: 2,
+    playerId: save.player.id,
+    savedAt: save.progress.updatedAt,
+    data: {
+      player: save.player,
+      progress: legacyProgress,
+      session: {
+        playerId: save.player.id,
+        startedAt: save.player.createdAt,
+        lastActiveAt: save.progress.updatedAt,
+      },
+    },
+  };
+  localStorage.setItem(playerKey(save.player.id), JSON.stringify(legacy));
+
+  const migrated = manager.loadPlayer(save.player.id);
+  const persisted = JSON.parse(localStorage.getItem(playerKey(save.player.id)));
+
+  assert.equal(migrated.session.status, "not_started");
+  assert.equal(migrated.session.playerId, save.player.id);
+  assert.deepEqual(migrated.progress.scenarioStates, {});
+  assert.equal(persisted.schemaVersion, CURRENT_PLAYER_SAVE_SCHEMA_VERSION);
+});
+
 test("a corrupt primary player save recovers from its last-known-good backup", () => {
   const localStorage = new MemoryLocalStorage();
   const manager = createPlayerManager(localStorage);

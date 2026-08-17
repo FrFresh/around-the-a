@@ -23,6 +23,7 @@ src/
   foundation/                 Composition root and manager lifecycle
   player/                     Profiles, sessions, isolated saves, and game adapter
   game-engine/                UI-facing GameManager and reusable composition factories
+                              Player-scoped lifecycle, transitions, and progression
   scenario-engine/            Phase 0 ScenarioManager contract and placeholder
   evaluation/                 Replaceable evaluation contract
   rewards/                    Phase 0 RewardManager contract and placeholder

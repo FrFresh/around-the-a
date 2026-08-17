@@ -132,3 +132,80 @@ Exports are serialized current-version envelopes. Imports pass through the same 
 ### Backend migration seam
 
 `StorageService` remains a small synchronous key/value contract. Browser persistence is implemented only by `BrowserStorageService`; no other production module accesses `window.localStorage`. A future Supabase adapter can implement the same contract initially, or the interface can become asynchronous in one coordinated infrastructure migration. Save envelopes, validation, migrations, conflict behavior, and player isolation remain repository concerns and do not depend on the browser API.
+
+## Phase 3 Game Lifecycle
+
+```text
+Player
+  ↓
+GameSession
+  ↓
+Scenario
+  ↓
+Stage
+  ↓
+PlayerAction
+  ↓
+Transition
+  ↓
+Progression / Reward
+  ↓
+PlayerManager save
+  ↓
+GameSnapshot
+```
+
+### Responsibilities
+
+`GameManager` is the public application boundary. It accepts lifecycle intent, delegates to `GameOrchestrator`, and returns player-only `GameSnapshot` projections. It does not expose the orchestrator, transition state, repositories, or mutable save records to React.
+
+`GameOrchestrator` coordinates start, resume, pause, scenario loading, actions, stage completion, scenario completion, domain events, and persistence checkpoints. It never accesses browser storage directly; every checkpoint passes through `PlayerManager` and the Phase 2 repository.
+
+The pre-existing prototype uses `ApplicationSnapshot` and its legacy gameplay adapter until its later migration phase. This compatibility surface does not control Phase 3 progression.
+
+### Session and player isolation
+
+Schema version 3 evolves the previous activity session into `GameSession`. Each session contains its own ID and player ID plus lifecycle status, current scenario, current stage, and timestamps. Scenario states also contain their owning player ID. Version 2 saves migrate forward with a `not_started` player-owned session and an empty scenario-state collection.
+
+Every orchestration command begins by loading the explicitly requested player. Actions carry the expected session and scenario IDs; mismatches throw `ScenarioOwnershipError` before any save occurs. Switching the selected profile does not move or share sessions because sessions live inside each ID-scoped save.
+
+### Scenario state machine
+
+The reusable stage vocabulary is:
+
+```text
+LOCKED → AVAILABLE → INTRO → ENCOUNTER → CHALLENGE
+       → FEEDBACK → REFLECTION → COMPLETE
+```
+
+Individual scenario definitions declare an ordered subset of those stages. `transitionScenario` is the only mechanism that starts, advances, or completes a scenario state. It rejects locked starts, skipped stages, completion before the final `complete` stage, ownership mismatches, and replay of completed state.
+
+Phase 3 includes exactly one deliberately generic engine fixture using `intro → challenge → feedback → complete`. It contains no Atlanta or educational scenario content and will be replaced during later scenario work.
+
+### Data-driven progression
+
+`ProgressionEngine` reads declarative `Scenario` metadata:
+
+- prerequisite scenario IDs
+- ordered stage IDs
+- next scenario IDs
+- completion reward metadata
+
+Unlock checks, available-scenario queries, next-scenario lookup, completion marking, and reward application are centralized there. UI code contains no scenario-ID condition chains.
+
+### Reward idempotency
+
+A completed scenario ID is the idempotency key for its completion reward. The engine records completion, XP, A Points, badges, and next unlocks in one state change. A second completion attempt throws `ScenarioAlreadyCompletedError` before values can change. Badge arrays are deduplicated as an additional safeguard. This is orchestration only; the complete A-Card and reward-redemption system remains Phase 8 work.
+
+### Autosave and events
+
+The engine creates lightweight typed events such as `GameStarted`, `StageCompleted`, `ScenarioCompleted`, `RewardGranted`, and `ScenarioUnlocked`. They describe one domain operation without introducing an event bus.
+
+One atomic primary save checkpoint occurs after each successful meaningful command:
+
+- game start, pause, or resume
+- scenario start or restore
+- stage transition
+- scenario completion, reward, and unlock transaction
+
+Rejected transitions never save. React renders returned snapshots and never writes progression directly.

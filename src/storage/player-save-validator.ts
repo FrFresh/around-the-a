@@ -65,6 +65,20 @@ export function assertPlayerSaveData(
   ) {
     fail("Player session fields are invalid or use a mismatched player ID.");
   }
+  if (session.currentScenarioId === null && session.currentStageId !== null) {
+    fail("A game session without a scenario cannot reference a stage.");
+  }
+  if (session.currentScenarioId !== null) {
+    const states = progress.scenarioStates as Record<string, unknown>;
+    const state = states[session.currentScenarioId];
+    if (
+      !isRecord(state) ||
+      state.playerId !== playerId ||
+      state.currentStageId !== session.currentStageId
+    ) {
+      fail("Game session scenario state is missing or inconsistent.");
+    }
+  }
 }
 
 function validScenarioStates(value: unknown, playerId: PlayerId): boolean {
