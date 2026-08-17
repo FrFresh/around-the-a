@@ -20,7 +20,7 @@ test("a weak question gives vague feedback without rewards", async () => {
   );
   assert.equal(result.completed, false);
   assert.equal(result.player.xp, 0);
-  assert.match(result.evaluation.npcResponse, /head north/);
+  assert.match(result.evaluation.npcResponse, /northbound train/);
 });
 
 test("three required fundamentals complete the scenario and unlock Ponce", async () => {

@@ -93,11 +93,19 @@ export class ProgressionEngine {
       completedScenarioIds: [...progress.completedScenarioIds, scenario.id],
       xp: progress.xp + scenario.reward.xp,
       aPoints: progress.aPoints + scenario.reward.aPoints,
+      unlockedSkillIds: unique([
+        ...progress.unlockedSkillIds,
+        scenario.literacySkillId,
+      ]),
       passport: {
         ...progress.passport,
         earnedBadgeIds: unique([
           ...progress.passport.earnedBadgeIds,
           ...scenario.reward.badgeIds,
+        ]),
+        unlockedSkillIds: unique([
+          ...progress.passport.unlockedSkillIds,
+          scenario.literacySkillId,
         ]),
       },
       scenarioStates: {

@@ -36,3 +36,9 @@ export {
   type CreateGameManagerOptions,
 } from "./create-game-manager.ts";
 export { GameManager, type GameManagerDependencies } from "./game-manager.ts";
+export {
+  ASK_BETTER_BADGE_ID,
+  ASK_BETTER_SKILL_ID,
+  FIVE_POINTS_SCENARIO_ID,
+  PONCE_TEASER_SCENARIO_ID,
+} from "../scenarios/index.ts";

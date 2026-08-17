@@ -24,11 +24,15 @@ Scenario Engine
 
 Browser bootstrap diagnostics, engine-state inspection, pull-request validation, and Cloudflare preview delivery.
 
-## Phase 5
+## Milestone 2 — First Playable Vertical Slice
+
+Five Points: Ask Better. One complete player-facing lesson with typed input, deterministic evaluation, retry feedback, A-Card unlock, persistent rewards, mobile-first pixel UI, and a Ponce City Market teaser.
+
+## Phase 5 — Included in Milestone 2 for Five Points only
 
 Rule-based AI Evaluation Engine
 
-## Phase 6
+## Phase 6 — Included in Milestone 2 for Five Points only
 
 Five Points (Prompting)
 
@@ -38,7 +42,7 @@ Atlanta World Map
 
 ## Phase 8
 
-AI Literacy A-Card, XP, Rewards
+Expand the A-Card, XP, and rewards beyond the first Ask Better slot.
 
 ## Phase 9
 

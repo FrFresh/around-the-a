@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { createGameManager } from "../src/game-engine/index.ts";
+import {
+  FIVE_POINTS_SCENARIO_ID,
+  createGameManager,
+} from "../src/game-engine/index.ts";
 import { PlayerManager, PlayerSaveRepository } from "../src/player/index.ts";
 import {
   BrowserStorageService,
@@ -129,7 +132,7 @@ test("schema version 3 scenario state migrates to the Phase 4 retry model", asyn
   localStorage.setItem(playerKey(playerId), JSON.stringify(persisted));
 
   const migrated = game.loadPlayer(playerId);
-  const state = migrated.progress.scenarioStates["engine-test-scenario"];
+  const state = migrated.progress.scenarioStates[FIVE_POINTS_SCENARIO_ID];
   assert.deepEqual(state.attemptsByStageId, {});
   assert.equal(state.latestEvaluation, null);
   assert.equal(state.availableHint, null);

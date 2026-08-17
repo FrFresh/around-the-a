@@ -2,9 +2,11 @@
 
 Around the A is a mobile-first, 8-bit AI literacy adventure set in Atlanta. The first playable stop, Five Points, teaches players that better questions unlock better information.
 
-## Current prototype
+## First playable vertical slice
 
-The player arrives at Five Points, asks a weak transit question, receives a vague clue, and revises the question using four fundamentals: goal, context, constraints, and desired output. Demonstrating at least three—including the first three required dimensions—earns 100 XP, 100 A Points, the Better Questions badge, and unlocks Ponce City Market.
+The player creates or selects a traveler, rides into Five Points, meets Maya, and asks for help reaching an important Midtown interview. A deterministic evaluator checks the question for goal, context, constraints, and desired output. Demonstrating at least three earns 100 XP, 100 A Points, the Better Questions badge, and the ASK BETTER stamp on the AI Literacy A-Card.
+
+Ponce City Market is revealed only as the next-stop teaser. Its lesson is not implemented.
 
 Progress is persisted locally in the browser using versioned, validated,
 player-scoped save envelopes. Existing saves migrate forward, last-known-good
@@ -13,7 +15,7 @@ Game Manager without silently replacing another profile.
 
 Multiple travelers can create independent profiles on one device. Use the traveler control in the header to create, switch, or delete profiles; each profile keeps separate XP, A Points, skills, scenarios, inventory, and passport progress.
 
-The gameplay prototype predates the formal roadmap. Phase 0 preserves it without adding gameplay while establishing the contracts that later phases will adopt.
+The normal player experience is available at `/`. The engine diagnostic remains available separately at `/dev/engine` for development and QA.
 
 ## Architecture
 

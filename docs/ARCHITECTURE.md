@@ -258,3 +258,35 @@ Raw challenge inputs are deliberately not persisted. Only state required to rend
 ### Phase boundary
 
 The Phase 4 fixture is neutral engine test data. Rule-based AI-literacy evaluation, the Five Points lesson, Atlanta NPC dialogue, world maps, movement, animation, and remote/LLM evaluation remain future work.
+
+## Milestone 2 — First Playable Vertical Slice
+
+The production composition now registers one playable authored scenario: `five-points-prompting`. The neutral Phase 4 definition remains a registry test fixture but is no longer available to normal players. Existing profiles that contain only the retired fixture are reset through `PlayerManager` to a fresh Five Points save while preserving player identity.
+
+### Player-facing flow
+
+```text
+Title / player selection
+  → GameManager lifecycle command
+  → Five Points ScenarioDefinition
+  → typed question
+  → AskBetterEvaluator
+  → ScenarioEngine feedback / retry
+  → GameOrchestrator completion
+  → XP, A Points, badge, skill unlock, save
+  → A-Card / Ponce teaser
+```
+
+`/` renders the cartridge experience. `/dev/engine` renders the development diagnostic. Both routes share `useGameRuntime`, which initializes the browser GameManager and translates component intent into GameManager commands. Components never import storage, player repositories, evaluator instances, or progression mutations.
+
+### Ask Better evaluator
+
+`AskBetterEvaluator` is deterministic and registered through `EvaluatorRegistry`. It scores goal, context, constraints, and desired output, returns the standard `EvaluationResult`, and supplies an in-world NPC response. Pattern matching is centralized in `evaluateAskBetterQuestion`; the compatibility prototype evaluator delegates to the same function instead of duplicating literacy rules.
+
+Raw questions remain transient React/action input and are not persisted. Player-scoped scenario state stores only attempt counts, dimension results, feedback, and progressive hints.
+
+### A-Card progression
+
+`Scenario.literacySkillId` is carried from authored content into `ProgressionEngine`. Scenario completion updates both `PlayerProgress.unlockedSkillIds` and `Passport.unlockedSkillIds` in the same idempotent transaction that grants XP, A Points, badges, and the next scenario ID. The A-Card renders this snapshot; it never unlocks itself.
+
+Ponce City Market is intentionally an unregistered teaser ID. It can be revealed by progression, but no Ponce scenario definition, evaluator, environment, or gameplay exists in this milestone.

@@ -130,6 +130,7 @@ export interface Skill {
 export interface Scenario {
   id: ScenarioId;
   title: string;
+  literacySkillId: SkillId;
   prerequisiteScenarioIds: ScenarioId[];
   nextScenarioIds: ScenarioId[];
   stageIds: ScenarioStageId[];
@@ -146,4 +147,6 @@ export interface EvaluationResult {
   maxScore?: number;
   /** Compatibility detail for existing rule-based evaluators. */
   dimensions?: Readonly<Record<string, boolean>>;
+  /** Optional in-world response authored by a deterministic or remote evaluator. */
+  npcResponse?: string;
 }

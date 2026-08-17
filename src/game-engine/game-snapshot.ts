@@ -27,6 +27,7 @@ export interface GameSnapshot {
     readonly completedScenarioIds: readonly ScenarioId[];
     readonly unlockedScenarioIds: readonly ScenarioId[];
     readonly availableScenarioIds: readonly ScenarioId[];
+    readonly unlockedSkillIds: readonly string[];
   };
   readonly rewards: {
     readonly xp: number;
@@ -57,6 +58,7 @@ export function createGameSnapshot(
       completedScenarioIds: progress.completedScenarioIds,
       unlockedScenarioIds: progress.unlockedScenarioIds,
       availableScenarioIds,
+      unlockedSkillIds: progress.unlockedSkillIds,
     },
     rewards: {
       xp: progress.xp,
