@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { GameEngine } from "./game/engine";
-import { defaultPlayer, type EvaluationResult, type PlayerState } from "./game/types";
-import { fivePoints } from "./scenarios/fivePoints";
-import { LocalStorageGameStorage } from "./storage/localStorage";
+import { GameEngine } from "../src/game/engine";
+import { defaultPlayer, type PlayerState } from "../src/game/player-state";
+import type { EvaluationResult } from "../src/game/types";
+import { fivePoints } from "../src/scenarios/five-points";
+import { LocalStorageGameStorage } from "../src/storage/local-storage";
 
 type View = "map" | "scenario" | "success" | "passport";
 

@@ -1,4 +1,5 @@
 import type { Dimension, EvaluationResult, Scenario } from "../game/types.ts";
+import type { ResponseEvaluator } from "./response-evaluator.ts";
 
 const patterns: Record<Dimension, RegExp[]> = {
   goal: [/need to/i, /trying to/i, /get to/i, /reach/i, /interview/i, /appointment/i, /arrive/i],
@@ -7,10 +8,9 @@ const patterns: Record<Dimension, RegExp[]> = {
   desiredOutput: [/two (?:options|ways|routes)/i, /step[- ]by[- ]step/i, /recommend/i, /which (?:one|route|option)/i, /list/i, /compare/i, /tell me/i, /give me/i],
 };
 
-export class RuleBasedEvaluator {
+export class RuleBasedEvaluator implements ResponseEvaluator {
   async evaluate(input: string, scenario: Scenario): Promise<EvaluationResult> {
-    const text = input.trim();
-    const dimensions = Object.fromEntries(Object.entries(patterns).map(([key, values]) => [key, values.some((pattern) => pattern.test(text))])) as EvaluationResult["dimensions"];
+    const dimensions = Object.fromEntries(Object.entries(patterns).map(([key, values]) => [key, values.some((pattern) => pattern.test(input.trim()))])) as EvaluationResult["dimensions"];
     const score = Object.values(dimensions).filter(Boolean).length;
     const passed = score >= scenario.successCriteria.minimumScore && scenario.successCriteria.requiredDimensions.every((key) => dimensions[key]);
     const missing = (Object.keys(dimensions) as Dimension[]).filter((key) => !dimensions[key]);

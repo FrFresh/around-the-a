@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { GameEngine } from "../app/game/engine.ts";
-import { defaultPlayer } from "../app/game/types.ts";
+import { GameEngine } from "../src/game/engine.ts";
+import { defaultPlayer } from "../src/game/player-state.ts";
 
 class MemoryStorage {
   state = structuredClone(defaultPlayer);
