@@ -94,7 +94,11 @@ function validScenarioStates(value: unknown, playerId: PlayerId): boolean {
       Array.isArray(state.completedStageIds) &&
       state.completedStageIds.every(scenarioStageId) &&
       Number.isInteger(state.attempts) &&
-      (state.attempts as number) >= 0
+      (state.attempts as number) >= 0 &&
+      numberRecord(state.attemptsByStageId) &&
+      validEvaluation(state.latestEvaluation) &&
+      (state.availableHint === null || nonEmptyString(state.availableHint)) &&
+      stringRecord(state.reflectionResponses)
     );
   });
 }
@@ -112,14 +116,21 @@ function scenarioStatus(value: unknown): boolean {
 }
 
 function scenarioStageId(value: unknown): boolean {
-  return [
-    "intro",
-    "encounter",
-    "challenge",
-    "feedback",
-    "reflection",
-    "complete",
-  ].includes(value as string);
+  return nonEmptyString(value);
+}
+
+function validEvaluation(value: unknown): boolean {
+  if (value === null) return true;
+  return (
+    isRecord(value) &&
+    typeof value.passed === "boolean" &&
+    nonNegativeNumber(value.score) &&
+    nonEmptyString(value.feedback) &&
+    (value.hint === undefined || nonEmptyString(value.hint)) &&
+    (value.metadata === undefined || isRecord(value.metadata)) &&
+    (value.maxScore === undefined || nonNegativeNumber(value.maxScore)) &&
+    (value.dimensions === undefined || booleanRecord(value.dimensions))
+  );
 }
 
 export function assertPlayerSaveEnvelope(
@@ -165,6 +176,17 @@ function numberRecord(value: unknown): boolean {
     isRecord(value) &&
     Object.values(value).every((entry) => nonNegativeNumber(entry))
   );
+}
+
+function booleanRecord(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    Object.values(value).every((entry) => typeof entry === "boolean")
+  );
+}
+
+function stringRecord(value: unknown): boolean {
+  return isRecord(value) && Object.values(value).every(nonEmptyString);
 }
 
 function stringArray(value: unknown): value is string[] {

@@ -49,6 +49,30 @@ async function setup(storage = new MemoryLocalStorage(), ids = ["player-a"]) {
   return { game, storage };
 }
 
+function submit(game, playerId, snapshot, action) {
+  return game.submitAction(playerId, {
+    ...action,
+    sessionId: snapshot.session.id,
+    scenarioId: snapshot.session.currentScenarioId,
+  });
+}
+
+function reachChallenge(game, playerId) {
+  game.completeStage(playerId);
+  return game.completeStage(playerId);
+}
+
+function reachCompletionStage(game, playerId) {
+  const challenge = reachChallenge(game, playerId);
+  const reflection = submit(game, playerId, challenge, {
+    type: "submit",
+    input: "clear",
+  });
+  const reward = submit(game, playerId, reflection, { type: "reflect" });
+  game.completeStage(playerId);
+  return reward;
+}
+
 test("starting a new game creates an active player-scoped scenario session", async () => {
   const { game } = await setup();
   const playerId = game.createPlayer("Alex").activeSave.player.id;
@@ -67,7 +91,7 @@ test("a paused game resumes at the exact scenario stage", async () => {
   const { game } = await setup();
   const playerId = game.createPlayer("Alex").activeSave.player.id;
   game.startGame(playerId);
-  game.completeStage(playerId);
+  reachChallenge(game, playerId);
   const paused = game.pauseGame(playerId);
 
   const resumed = game.resumeGame(playerId);
@@ -115,16 +139,21 @@ test("progression rejects a known scenario whose prerequisites are unmet", () =>
   );
 });
 
-test("the placeholder scenario follows its configured stage sequence", async () => {
+test("the authored scenario follows its configured forward stage sequence", async () => {
   const { game } = await setup();
   const playerId = game.createPlayer("Alex").activeSave.player.id;
   game.startGame(playerId);
 
-  assert.equal(
-    game.completeStage(playerId).session.currentStageId,
-    "challenge",
-  );
-  assert.equal(game.completeStage(playerId).session.currentStageId, "feedback");
+  assert.equal(game.completeStage(playerId).session.currentStageId, "dialogue");
+  const challenge = game.completeStage(playerId);
+  assert.equal(challenge.session.currentStageId, "challenge");
+  const reflection = submit(game, playerId, challenge, {
+    type: "submit",
+    input: "clear",
+  });
+  assert.equal(reflection.session.currentStageId, "reflection");
+  const reward = submit(game, playerId, reflection, { type: "reflect" });
+  assert.equal(reward.session.currentStageId, "reward");
   assert.equal(game.completeStage(playerId).session.currentStageId, "complete");
 });
 
@@ -132,7 +161,7 @@ test("loading an unlocked active scenario restores its current stage", async () 
   const { game } = await setup();
   const playerId = game.createPlayer("Alex").activeSave.player.id;
   game.startGame(playerId);
-  game.completeStage(playerId);
+  reachChallenge(game, playerId);
 
   const loaded = game.loadScenario(playerId, PLACEHOLDER_SCENARIO_ID);
 
@@ -144,9 +173,7 @@ test("scenario completion grants rewards and unlocks declarative next progress",
   const { game } = await setup();
   const playerId = game.createPlayer("Alex").activeSave.player.id;
   game.startGame(playerId);
-  game.completeStage(playerId);
-  game.completeStage(playerId);
-  game.completeStage(playerId);
+  reachCompletionStage(game, playerId);
 
   const completed = game.completeScenario(playerId);
 
@@ -169,9 +196,7 @@ test("completion rewards cannot be granted twice", async () => {
   const { game } = await setup();
   const playerId = game.createPlayer("Alex").activeSave.player.id;
   game.startGame(playerId);
-  game.completeStage(playerId);
-  game.completeStage(playerId);
-  game.completeStage(playerId);
+  reachCompletionStage(game, playerId);
   game.completeScenario(playerId);
 
   assert.throws(
@@ -230,7 +255,7 @@ test("two players advance independently and switching restores exact state", asy
   const playerB = game.createPlayer("Blair").activeSave.player.id;
 
   game.startGame(playerA);
-  game.completeStage(playerA);
+  reachChallenge(game, playerA);
   game.startGame(playerB);
 
   game.switchPlayer(playerA);
@@ -279,7 +304,7 @@ test("refresh restores the player-owned session and exact stage", async () => {
   const { game } = await setup(storage);
   const playerId = game.createPlayer("Alex").activeSave.player.id;
   game.startGame(playerId);
-  game.completeStage(playerId);
+  reachChallenge(game, playerId);
   game.pauseGame(playerId);
 
   const refreshed = await createGameManager({

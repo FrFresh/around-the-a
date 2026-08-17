@@ -84,12 +84,15 @@ export interface PlayerImportOptions {
 
 export type ScenarioStatus = "locked" | "available" | "active" | "completed";
 
-export type ScenarioStageId =
+export type ScenarioStageId = string;
+
+export type ScenarioStageType =
   | "intro"
-  | "encounter"
+  | "dialogue"
   | "challenge"
   | "feedback"
   | "reflection"
+  | "reward"
   | "complete";
 
 export interface ScenarioState {
@@ -99,6 +102,10 @@ export interface ScenarioState {
   currentStageId: ScenarioStageId | null;
   completedStageIds: ScenarioStageId[];
   attempts: number;
+  attemptsByStageId: Partial<Record<ScenarioStageId, number>>;
+  latestEvaluation: EvaluationResult | null;
+  availableHint: string | null;
+  reflectionResponses: Partial<Record<ScenarioStageId, string>>;
 }
 
 export interface Reward {
@@ -132,7 +139,11 @@ export interface Scenario {
 export interface EvaluationResult {
   passed: boolean;
   score: number;
-  maxScore: number;
-  dimensions: Readonly<Record<string, boolean>>;
   feedback: string;
+  hint?: string;
+  metadata?: Readonly<Record<string, unknown>>;
+  /** Compatibility detail for existing rule-based evaluators. */
+  maxScore?: number;
+  /** Compatibility detail for existing rule-based evaluators. */
+  dimensions?: Readonly<Record<string, boolean>>;
 }

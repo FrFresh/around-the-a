@@ -4,6 +4,7 @@ import type {
   ScenarioId,
   ScenarioState,
 } from "../types/index.ts";
+import { createInitialScenarioState } from "../scenario-engine/index.ts";
 import {
   ScenarioAlreadyCompletedError,
   ScenarioLockedError,
@@ -71,14 +72,7 @@ export class ProgressionEngine {
     if (!this.isScenarioUnlocked(progress, id)) {
       throw new ScenarioLockedError(progress.playerId, id);
     }
-    return {
-      playerId: progress.playerId,
-      scenarioId: id,
-      status: "available",
-      currentStageId: null,
-      completedStageIds: [],
-      attempts: 0,
-    };
+    return createInitialScenarioState(progress, id);
   }
 
   completeScenario(

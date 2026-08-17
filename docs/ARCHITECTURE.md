@@ -101,7 +101,7 @@ The game uses two distinct save representations:
 - `PlayerSaveData` is validated domain data used by `PlayerManager`, `GameManager`, and gameplay adapters.
 - `PlayerSaveEnvelope` is the persistence and transfer format. It contains `schemaVersion`, `playerId`, `savedAt`, and `data`.
 
-The current persisted schema is version 2. Phase 1's top-level version 1 shape remains readable and migrates forward through the registry in `src/storage/migrations`. A schema change must add one ordered migration to that registry and advance `CURRENT_PLAYER_SAVE_SCHEMA_VERSION`; feature modules must never implement migrations themselves. Successfully migrated saves are immediately rewritten in the current format.
+The current persisted schema is version 4. Phase 1's top-level version 1 shape remains readable and migrates forward through the registry in `src/storage/migrations`. A schema change must add one ordered migration to that registry and advance `CURRENT_PLAYER_SAVE_SCHEMA_VERSION`; feature modules must never implement migrations themselves. Successfully migrated saves are immediately rewritten in the current format.
 
 ### Read lifecycle
 
@@ -209,3 +209,52 @@ One atomic primary save checkpoint occurs after each successful meaningful comma
 - scenario completion, reward, and unlock transaction
 
 Rejected transitions never save. React renders returned snapshots and never writes progression directly.
+
+## Phase 4 Scenario Engine
+
+Phase 4 replaces the generic ordered-stage fixture with an authored, data-driven scenario graph. It does not add the Five Points lesson or any Atlanta dialogue.
+
+```text
+Player intent
+  → GameManager
+  → GameOrchestrator
+  → ScenarioEngine
+  → ScenarioRegistry / ScenarioDefinition
+  → EvaluatorRegistry (challenge stages only)
+  → ScenarioTransitionResult
+  → GameOrchestrator save / reward / unlock
+  → GameSnapshot
+```
+
+### Authored content and registries
+
+`ScenarioDefinition` is the content contract. A definition declares identity and version, location metadata, literacy skill, prerequisites, a start stage, typed stage data, rewards, and next-scenario IDs. The reusable stage union includes `intro`, `dialogue`, `challenge`, `feedback`, `reflection`, `reward`, and `complete`.
+
+`ScenarioRegistry` owns registration, immutable retrieval, and graph validation. It rejects duplicate stage IDs, missing start or completion stages, broken stage references, unavailable evaluator IDs, malformed rewards/prerequisites, unreachable completion, and circular forward transitions. Explicit challenge retry edges are the only permitted loop.
+
+`EvaluatorRegistry` resolves evaluator IDs declared by challenge content. Evaluators receive unknown player input plus a narrow evaluation context and return one standardized `EvaluationResult`. Phase 4 registers only a deterministic neutral evaluator. A later evaluation phase may provide a different adapter without changing scenario definitions.
+
+### Runtime responsibilities
+
+`ScenarioEngine` owns behavior inside a scenario:
+
+- resolve the current authored stage
+- validate stage-specific actions
+- evaluate challenge attempts
+- select authored hints by attempt number
+- route success, feedback, retry, reflection, reward, and completion stages
+- produce the current render-only content projection
+
+`GameOrchestrator` continues to own player/session checks, autosave checkpoints, domain events, scenario completion, reward idempotency, and unlocks. A `reward` stage declares and previews content; it cannot mutate XP, A Points, badges, or progression. Rewards are applied only when the orchestrator completes the terminal `complete` stage.
+
+React continues to call only `GameManager`. `GameSnapshot` now exposes the current scenario's safe content metadata and current stage data alongside player-owned state. It does not expose registries, evaluators, the full scenario graph, repositories, or mutable engine services.
+
+### Retry persistence and privacy
+
+Schema version 4 adds player-scoped retry state to each `ScenarioState`: total and per-stage attempt counts, the latest standardized evaluation, the currently available authored hint, and optional reflection responses. Version 3 saves migrate forward centrally with empty retry state.
+
+Raw challenge inputs are deliberately not persisted. Only state required to render and resume the retry flow is saved. All scenario state remains nested under one player's ID-scoped save, so switching profiles or refreshing restores the exact stage and attempts without exposing or mutating another player's progress.
+
+### Phase boundary
+
+The Phase 4 fixture is neutral engine test data. Rule-based AI-literacy evaluation, the Five Points lesson, Atlanta NPC dialogue, world maps, movement, animation, and remote/LLM evaluation remain future work.
