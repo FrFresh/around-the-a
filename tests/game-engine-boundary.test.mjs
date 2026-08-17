@@ -9,10 +9,13 @@ test("the application UI communicates with the Game Engine boundary only", async
   );
 
   assert.match(page, /createBrowserGameManager/);
+  assert.match(page, /initializeApplication/);
+  assert.match(page, /getHealthCheck/);
+  assert.match(page, /resetPlayerProgress/);
   assert.doesNotMatch(
     page,
     /PlayerManager|PlayerGameStorage|PlayerSaveRepository/,
   );
   assert.doesNotMatch(page, /localStorage/);
-  assert.doesNotMatch(page, /setPlayer|setActiveSave|setProfiles/);
+  assert.doesNotMatch(page, /\bset(Player|ActiveSave|Profiles)\b/);
 });

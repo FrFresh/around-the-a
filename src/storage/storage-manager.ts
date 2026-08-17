@@ -11,6 +11,10 @@ export class StorageManager extends BaseManager implements IStorageManager {
     this.adapter = adapter;
   }
 
+  get isAvailable(): boolean {
+    return Boolean(this.adapter);
+  }
+
   read<T>(key: string): T | null {
     return this.requireAdapter().read<T>(key);
   }

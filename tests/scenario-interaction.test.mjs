@@ -164,3 +164,22 @@ test("attempts persist across refresh and remain isolated by player", async () =
   );
   assert.equal(refreshed.getGameSnapshot(playerB).scenario.attempts, 0);
 });
+
+test("diagnostic reset returns only the selected player to fresh engine state", async () => {
+  const { game } = await setup(new MemoryLocalStorage(), [
+    "player-a",
+    "player-b",
+  ]);
+  const playerA = game.createPlayer("Alex").activeSave.player.id;
+  const playerB = game.createPlayer("Blair").activeSave.player.id;
+  const challengeA = reachChallenge(game, playerA);
+  act(game, playerA, challengeA, { type: "submit", input: "vague" });
+  game.startGame(playerB);
+
+  game.resetPlayerProgress(playerA);
+
+  assert.equal(game.getGameSnapshot(playerA).session.status, "not_started");
+  assert.equal(game.getGameSnapshot(playerA).scenario, null);
+  assert.equal(game.getGameSnapshot(playerB).session.status, "active");
+  assert.equal(game.getGameSnapshot(playerB).session.currentStageId, "intro");
+});

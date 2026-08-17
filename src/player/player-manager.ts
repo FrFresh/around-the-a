@@ -42,19 +42,7 @@ export class PlayerManager {
     }
     const timestamp = this.now();
     const player: Player = { id, displayName: name, createdAt: timestamp };
-    const save: SaveData = {
-      player,
-      progress: this.createProgress(id, timestamp),
-      session: {
-        id: this.createSessionId(),
-        playerId: id,
-        status: "not_started",
-        currentScenarioId: null,
-        currentStageId: null,
-        startedAt: null,
-        updatedAt: timestamp,
-      },
-    };
+    const save = this.createFreshSave(player, timestamp);
     this.storage.writePlayer(save);
     this.storage.setActivePlayerId(id);
     return structuredClone(save);
@@ -113,6 +101,31 @@ export class PlayerManager {
   deletePlayer(id: PlayerId): SaveData | null {
     this.storage.deletePlayer(id);
     return this.loadActivePlayer();
+  }
+
+  resetPlayerProgress(id: PlayerId): SaveData {
+    const existing = this.storage.readPlayer(id);
+    if (!existing) throw new Error(`Player not found: ${id}`);
+    const reset = this.createFreshSave(existing.player, this.now());
+    this.storage.writePlayer(reset);
+    this.storage.setActivePlayerId(id);
+    return structuredClone(reset);
+  }
+
+  private createFreshSave(player: Player, timestamp: string): SaveData {
+    return {
+      player,
+      progress: this.createProgress(player.id, timestamp),
+      session: {
+        id: this.createSessionId(),
+        playerId: player.id,
+        status: "not_started",
+        currentScenarioId: null,
+        currentStageId: null,
+        startedAt: null,
+        updatedAt: timestamp,
+      },
+    };
   }
 
   private createProgress(id: PlayerId, timestamp: string): PlayerProgress {

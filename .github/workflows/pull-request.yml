@@ -1,0 +1,75 @@
+name: Pull Request Validation and Preview
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: pull-request-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.13.0
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run format:check
+      - run: npm run build
+      - run: npm run test:unit
+
+  preview:
+    name: Cloudflare Preview
+    needs: validate
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22.13.0
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Check preview credentials
+        id: credentials
+        shell: bash
+        run: |
+          if [[ -n "$CLOUDFLARE_ACCOUNT_ID" && -n "$CLOUDFLARE_API_TOKEN" ]]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            echo "Cloudflare preview skipped: configure CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN." >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload versioned preview
+        if: steps.credentials.outputs.available == 'true'
+        id: preview
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: versions upload --config dist/server/wrangler.json --preview-alias pr-${{ github.event.pull_request.number }}
+      - name: Publish preview URL
+        if: steps.credentials.outputs.available == 'true'
+        shell: bash
+        env:
+          DEPLOYMENT_URL: ${{ steps.preview.outputs.deployment-url }}
+        run: |
+          echo "## Around the A preview" >> "$GITHUB_STEP_SUMMARY"
+          echo "$DEPLOYMENT_URL" >> "$GITHUB_STEP_SUMMARY"

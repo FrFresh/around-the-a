@@ -5,6 +5,7 @@ import type { PlayerManager } from "../player/index.ts";
 import type { IRewardManager } from "../rewards/index.ts";
 import type { IScenarioManager } from "../scenario-engine/index.ts";
 import type { IStorageManager } from "../storage/storage-manager.interface.ts";
+import { CURRENT_PLAYER_SAVE_SCHEMA_VERSION } from "../storage/index.ts";
 import type {
   PlayerId,
   PlayerImportOptions,
@@ -15,6 +16,7 @@ import type { GameOrchestrator, PlayerAction } from "./game-orchestrator.ts";
 import type { GameSnapshot } from "./game-snapshot.ts";
 import type {
   ApplicationSnapshot,
+  GameHealthCheck,
   IGameManager,
   SubmissionResult,
 } from "./game-manager.interface.ts";
@@ -84,6 +86,31 @@ export class GameManager extends BaseManager implements IGameManager {
     return this.requireOrchestrator().completeScenario(playerId).snapshot;
   }
 
+  getHealthCheck(): GameHealthCheck {
+    const registeredScenarioCount =
+      this.dependencies.scenarios.getAllScenarios().length;
+    const storageAdapterAvailable =
+      this.dependencies.storage.isInitialized &&
+      this.dependencies.storage.isAvailable;
+    const scenarioRegistryValid =
+      this.dependencies.scenarios.isInitialized && registeredScenarioCount > 0;
+    const gameManagerInitialized = this.isInitialized;
+    return {
+      status:
+        gameManagerInitialized &&
+        storageAdapterAvailable &&
+        scenarioRegistryValid
+          ? "ok"
+          : "error",
+      applicationBootSucceeded: gameManagerInitialized,
+      gameManagerInitialized,
+      storageAdapterAvailable,
+      scenarioRegistryValid,
+      registeredScenarioCount,
+      saveSchemaVersion: CURRENT_PLAYER_SAVE_SCHEMA_VERSION,
+    };
+  }
+
   createPlayer(displayName: string): ApplicationSnapshot {
     const { players } = this.requirePlayerSystem();
     players.createPlayer(displayName);
@@ -118,6 +145,11 @@ export class GameManager extends BaseManager implements IGameManager {
 
   deletePlayer(id: PlayerId): ApplicationSnapshot {
     this.requirePlayerSystem().players.deletePlayer(id);
+    return this.getSnapshot();
+  }
+
+  resetPlayerProgress(id: PlayerId): ApplicationSnapshot {
+    this.requirePlayerSystem().players.resetPlayerProgress(id);
     return this.getSnapshot();
   }
 

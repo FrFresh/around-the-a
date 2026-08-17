@@ -20,6 +20,10 @@ Game Engine
 
 Scenario Engine
 
+## Preview & Deployment Milestone
+
+Browser bootstrap diagnostics, engine-state inspection, pull-request validation, and Cloudflare preview delivery.
+
 ## Phase 5
 
 Rule-based AI Evaluation Engine
