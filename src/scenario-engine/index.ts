@@ -14,6 +14,16 @@ export type { IScenarioManager } from "./scenario-manager.interface.ts";
 export { ScenarioManager } from "./scenario-manager.ts";
 export type * from "./scenario-definition.ts";
 export {
+  ScenarioEngine,
+  ScenarioInteractionError,
+  createInitialScenarioState,
+  toProgressionScenario,
+  type ScenarioAction,
+  type ScenarioContentSnapshot,
+  type ScenarioStageSnapshot,
+  type ScenarioTransitionResult,
+} from "./scenario-engine.ts";
+export {
   ScenarioDefinitionValidationError,
   ScenarioRegistry,
   validateScenarioDefinition,

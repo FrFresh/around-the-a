@@ -6,6 +6,7 @@ import type {
 
 /** Neutral deterministic fixture used to prove engine behavior without lesson content. */
 export class DeterministicTestEvaluator implements ScenarioEvaluator {
+  // TODO(Phase 5): Register AI-literacy rule evaluators through this same boundary.
   evaluate(
     input: unknown,
     context: ScenarioEvaluationContext,

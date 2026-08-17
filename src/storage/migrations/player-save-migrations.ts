@@ -9,7 +9,7 @@ import {
 } from "../player-save-validator.ts";
 import { StorageMigrationError } from "../storage-errors.ts";
 
-export const CURRENT_PLAYER_SAVE_SCHEMA_VERSION = 3;
+export const CURRENT_PLAYER_SAVE_SCHEMA_VERSION = 4;
 
 type Migration = (save: unknown) => unknown;
 
@@ -20,6 +20,7 @@ type Migration = (save: unknown) => unknown;
 const migrations: Readonly<Record<number, Migration>> = {
   1: migrateVersion1ToVersion2,
   2: migrateVersion2ToVersion3,
+  3: migrateVersion3ToVersion4,
 };
 
 export interface PlayerSaveMigrationResult {
@@ -138,7 +139,39 @@ function migrateVersion2ToVersion3(value: unknown): PlayerSaveEnvelope {
         typeof updatedAt === "string" ? updatedAt : new Date(0).toISOString(),
     },
   };
-  return createPlayerSaveEnvelope(migratedData, migratedData.session.updatedAt);
+  return {
+    schemaVersion: 3,
+    playerId,
+    savedAt: migratedData.session.updatedAt,
+    data: migratedData,
+  };
+}
+
+function migrateVersion3ToVersion4(value: unknown): PlayerSaveEnvelope {
+  if (!isRecord(value) || value.schemaVersion !== 3 || !isRecord(value.data)) {
+    throw new StorageMigrationError("Schema version 3 player save is invalid.");
+  }
+  const data = structuredClone(value.data) as unknown as PlayerSaveData;
+  if (!isRecord(data.progress) || !isRecord(data.progress.scenarioStates)) {
+    throw new StorageMigrationError("Schema version 3 player data is invalid.");
+  }
+  for (const state of Object.values(data.progress.scenarioStates)) {
+    if (!isRecord(state)) {
+      throw new StorageMigrationError(
+        "Schema version 3 scenario state is invalid.",
+      );
+    }
+    state.attemptsByStageId = {};
+    state.latestEvaluation = null;
+    state.availableHint = null;
+    state.reflectionResponses = {};
+  }
+  return {
+    schemaVersion: 4,
+    playerId: value.playerId as PlayerId,
+    savedAt: value.savedAt as string,
+    data,
+  };
 }
 
 function readSchemaVersion(value: unknown): number {

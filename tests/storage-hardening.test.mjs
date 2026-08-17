@@ -107,6 +107,39 @@ test("schema version 2 saves gain player-scoped game session state", () => {
   assert.equal(persisted.schemaVersion, CURRENT_PLAYER_SAVE_SCHEMA_VERSION);
 });
 
+test("schema version 3 scenario state migrates to the Phase 4 retry model", async () => {
+  const localStorage = new MemoryLocalStorage();
+  const game = await createGameManager({
+    storage: new BrowserStorageService(localStorage),
+    player: {
+      createId: () => "phase-3-player",
+      now: () => "2026-03-01T00:00:00.000Z",
+    },
+  });
+  const playerId = game.createPlayer("Alex").activeSave.player.id;
+  game.startGame(playerId);
+  const persisted = JSON.parse(localStorage.getItem(playerKey(playerId)));
+  persisted.schemaVersion = 3;
+  for (const state of Object.values(persisted.data.progress.scenarioStates)) {
+    delete state.attemptsByStageId;
+    delete state.latestEvaluation;
+    delete state.availableHint;
+    delete state.reflectionResponses;
+  }
+  localStorage.setItem(playerKey(playerId), JSON.stringify(persisted));
+
+  const migrated = game.loadPlayer(playerId);
+  const state = migrated.progress.scenarioStates["engine-test-scenario"];
+  assert.deepEqual(state.attemptsByStageId, {});
+  assert.equal(state.latestEvaluation, null);
+  assert.equal(state.availableHint, null);
+  assert.deepEqual(state.reflectionResponses, {});
+  assert.equal(
+    JSON.parse(localStorage.getItem(playerKey(playerId))).schemaVersion,
+    CURRENT_PLAYER_SAVE_SCHEMA_VERSION,
+  );
+});
+
 test("a corrupt primary player save recovers from its last-known-good backup", () => {
   const localStorage = new MemoryLocalStorage();
   const manager = createPlayerManager(localStorage);

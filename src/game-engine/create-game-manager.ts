@@ -12,6 +12,7 @@ import {
   DeterministicTestEvaluator,
   EvaluatorRegistry,
   PHASE_FOUR_EVALUATOR_ID,
+  ScenarioEngine,
   ScenarioManager,
   ScenarioRegistry,
   phaseFourTestScenario,
@@ -19,7 +20,6 @@ import {
 import { StorageManager, type StorageService } from "../storage/index.ts";
 import { GameOrchestrator } from "./game-orchestrator.ts";
 import { GameManager } from "./game-manager.ts";
-import { placeholderScenario } from "./placeholder-scenario.ts";
 import { ProgressionEngine } from "./progression-engine.ts";
 
 export interface CreateGameManagerOptions {
@@ -38,10 +38,6 @@ export async function createGameManager({
   );
   const gameStorage = new PlayerGameStorage(players);
   const gameplay = new GameEngine(gameStorage);
-  const progression = new ProgressionEngine([placeholderScenario]);
-  const orchestrator = new GameOrchestrator(players, progression, {
-    now: playerOptions?.now,
-  });
   const evaluatorRegistry = new EvaluatorRegistry();
   evaluatorRegistry.register(
     PHASE_FOUR_EVALUATOR_ID,
@@ -49,6 +45,19 @@ export async function createGameManager({
   );
   const scenarioRegistry = new ScenarioRegistry(evaluatorRegistry);
   scenarioRegistry.register(phaseFourTestScenario);
+  const scenarioEngine = new ScenarioEngine(
+    scenarioRegistry,
+    evaluatorRegistry,
+  );
+  const progression = new ProgressionEngine(
+    scenarioEngine.getProgressionScenarios(),
+  );
+  const orchestrator = new GameOrchestrator(
+    players,
+    progression,
+    scenarioEngine,
+    { now: playerOptions?.now },
+  );
   const scenarios = new ScenarioManager(scenarioRegistry);
   const rewards = new RewardManager();
   const evaluator = new PlaceholderEvaluator();

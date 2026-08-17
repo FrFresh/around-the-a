@@ -64,15 +64,23 @@ export function validateScenarioDefinition(
   if (
     definition.prerequisiteScenarioIds.includes(definition.id) ||
     new Set(definition.prerequisiteScenarioIds).size !==
-      definition.prerequisiteScenarioIds.length
+      definition.prerequisiteScenarioIds.length ||
+    definition.prerequisiteScenarioIds.some((id) => !id.trim()) ||
+    definition.nextScenarioIds.includes(definition.id) ||
+    new Set(definition.nextScenarioIds).size !==
+      definition.nextScenarioIds.length ||
+    definition.nextScenarioIds.some((id) => !id.trim())
   ) {
-    invalid("Scenario prerequisites are invalid.");
+    invalid("Scenario prerequisites or next-scenario IDs are invalid.");
   }
   if (
     definition.reward.xp < 0 ||
     definition.reward.aPoints < 0 ||
     !Number.isFinite(definition.reward.xp) ||
-    !Number.isFinite(definition.reward.aPoints)
+    !Number.isFinite(definition.reward.aPoints) ||
+    definition.reward.badgeIds.some((id) => !id.trim()) ||
+    new Set(definition.reward.badgeIds).size !==
+      definition.reward.badgeIds.length
   ) {
     invalid("Scenario reward values must be finite and non-negative.");
   }
@@ -83,6 +91,7 @@ export function validateScenarioDefinition(
       invalid(`Duplicate or empty stage ID: ${stage.id}`);
     }
     stages.set(stage.id, stage);
+    validateStageContent(stage);
     if (stage.type === "challenge" && !evaluators.has(stage.evaluatorId)) {
       invalid(`Missing evaluator: ${stage.evaluatorId}`);
     }
@@ -116,11 +125,14 @@ export function validateScenarioDefinition(
   }
 
   const reachable = collectReachable(definition.startStageId, stages);
-  if (![...reachable].some((id) => stages.get(id)?.type === "complete")) {
-    invalid("No completion stage is reachable from the start stage.");
-  }
   if (hasDisallowedCycle(definition.startStageId, stages)) {
     invalid("Scenario contains a circular non-retry transition.");
+  }
+  if (reachable.size !== stages.size) {
+    invalid("Scenario contains an unreachable stage.");
+  }
+  if (![...reachable].some((id) => stages.get(id)?.type === "complete")) {
+    invalid("No completion stage is reachable from the start stage.");
   }
 }
 
@@ -137,6 +149,53 @@ function getNextStageIds(stage: ScenarioStageDefinition): ScenarioStageId[] {
       return [stage.nextOnSuccess, stage.nextOnRetry];
     default:
       return [stage.nextStageId];
+  }
+}
+
+function validateStageContent(stage: ScenarioStageDefinition): void {
+  switch (stage.type) {
+    case "intro":
+      if (!stage.text.trim()) invalid(`Intro stage ${stage.id} is invalid.`);
+      return;
+    case "dialogue": {
+      if (!stage.speaker.trim() || !stage.text.trim()) {
+        invalid(`Dialogue stage ${stage.id} is invalid.`);
+      }
+      const responses = stage.responses ?? [];
+      if (
+        responses.some(
+          (response) => !response.id.trim() || !response.text.trim(),
+        ) ||
+        new Set(responses.map((response) => response.id)).size !==
+          responses.length
+      ) {
+        invalid(`Dialogue responses for ${stage.id} are invalid.`);
+      }
+      return;
+    }
+    case "challenge":
+      if (
+        !stage.objective.trim() ||
+        !stage.inputPrompt.trim() ||
+        !stage.evaluatorId.trim() ||
+        !stage.successFeedback.trim() ||
+        !stage.retryFeedback.trim()
+      ) {
+        invalid(`Challenge stage ${stage.id} is invalid.`);
+      }
+      return;
+    case "feedback":
+    case "reward":
+    case "complete":
+      if (!stage.text.trim()) invalid(`Stage ${stage.id} is invalid.`);
+      return;
+    case "reflection":
+      if (!stage.prompt.trim()) {
+        invalid(`Reflection stage ${stage.id} is invalid.`);
+      }
+      return;
+    default:
+      invalid("Scenario contains an unsupported stage type.");
   }
 }
 
@@ -158,7 +217,7 @@ function collectReachable(
 
 /** Retry edges are intentionally cyclic; authored forward transitions are not. */
 function hasDisallowedCycle(
-  start: ScenarioStageId,
+  _start: ScenarioStageId,
   stages: ReadonlyMap<ScenarioStageId, ScenarioStageDefinition>,
 ): boolean {
   const visiting = new Set<ScenarioStageId>();
@@ -178,7 +237,7 @@ function hasDisallowedCycle(
     visited.add(id);
     return false;
   };
-  return visit(start);
+  return [...stages.keys()].some(visit);
 }
 
 function invalid(message: string): never {

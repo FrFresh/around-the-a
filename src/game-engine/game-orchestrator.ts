@@ -1,4 +1,9 @@
 import type { PlayerManager } from "../player/index.ts";
+import {
+  ScenarioEngine,
+  ScenarioInteractionError,
+  type ScenarioAction,
+} from "../scenario-engine/index.ts";
 import type {
   PlayerId,
   SaveData,
@@ -14,13 +19,11 @@ import {
 import type { GameEvent } from "./game-events.ts";
 import { createGameSnapshot, type GameSnapshot } from "./game-snapshot.ts";
 import { ProgressionEngine } from "./progression-engine.ts";
-import { transitionScenario } from "./scenario-state-machine.ts";
 
-export interface PlayerAction {
-  type: "advance";
+export type PlayerAction = ScenarioAction & {
   sessionId: string;
   scenarioId: ScenarioId;
-}
+};
 
 export interface GameOrchestrationResult {
   snapshot: GameSnapshot;
@@ -34,15 +37,18 @@ export interface GameOrchestratorOptions {
 export class GameOrchestrator {
   private readonly players: PlayerManager;
   private readonly progression: ProgressionEngine;
+  private readonly scenarios: ScenarioEngine;
   private readonly now: () => string;
 
   constructor(
     players: PlayerManager,
     progression: ProgressionEngine,
+    scenarios: ScenarioEngine,
     options: GameOrchestratorOptions = {},
   ) {
     this.players = players;
     this.progression = progression;
+    this.scenarios = scenarios;
     this.now = options.now ?? (() => new Date().toISOString());
   }
 
@@ -110,13 +116,13 @@ export class GameOrchestrator {
     const save = this.load(playerId);
     this.requireActiveSession(save);
     this.assertActionOwnership(save, action);
-    return this.advanceStage(save);
+    return this.applyScenarioAction(save, toScenarioAction(action));
   }
 
   completeStage(playerId: PlayerId): GameOrchestrationResult {
     const save = this.load(playerId);
     this.requireActiveSession(save);
-    return this.advanceStage(save);
+    return this.applyScenarioAction(save, { type: "advance" });
   }
 
   completeScenario(playerId: PlayerId): GameOrchestrationResult {
@@ -131,9 +137,15 @@ export class GameOrchestrator {
     if (save.progress.completedScenarioIds.includes(scenarioId)) {
       throw new ScenarioAlreadyCompletedError(playerId, scenarioId);
     }
-    const completedState = transitionScenario(state, scenario, {
-      type: "complete",
-    });
+    let completedState: ScenarioState;
+    try {
+      completedState = this.scenarios.complete(state);
+    } catch (error) {
+      if (error instanceof ScenarioInteractionError) {
+        throw this.invalidSession(save, error.message);
+      }
+      throw error;
+    }
     const occurredAt = this.now();
     const unlockedBefore = new Set(save.progress.unlockedScenarioIds);
     save.progress = this.progression.completeScenario(
@@ -177,7 +189,7 @@ export class GameOrchestrator {
     occurredAt: string,
     events: GameEvent[],
   ): SaveData {
-    const scenario = this.progression.getScenario(scenarioId);
+    this.progression.getScenario(scenarioId);
     if (save.progress.completedScenarioIds.includes(scenarioId)) {
       throw new ScenarioAlreadyCompletedError(save.player.id, scenarioId);
     }
@@ -199,9 +211,7 @@ export class GameOrchestrator {
       existing ??
       this.progression.createScenarioState(save.progress, scenarioId);
     const activeState =
-      state.status === "available"
-        ? transitionScenario(state, scenario, { type: "start" })
-        : state;
+      state.status === "available" ? this.scenarios.start(state) : state;
     if (activeState.status !== "active" || !activeState.currentStageId) {
       throw this.invalidSession(save, "Scenario cannot become active.");
     }
@@ -228,19 +238,25 @@ export class GameOrchestrator {
     return save;
   }
 
-  private advanceStage(save: SaveData): GameOrchestrationResult {
+  private applyScenarioAction(
+    save: SaveData,
+    action: ScenarioAction,
+  ): GameOrchestrationResult {
     const scenarioId = save.session.currentScenarioId;
     if (!scenarioId) throw this.invalidSession(save, "No scenario is active.");
-    const scenario = this.progression.getScenario(scenarioId);
     const state = this.requireOwnedScenarioState(save, scenarioId);
     if (!state.currentStageId) {
       throw this.invalidSession(save, "No scenario stage is active.");
     }
-    const completedStageId = state.currentStageId;
-    const nextState = transitionScenario(state, scenario, { type: "advance" });
+    const result = this.scenarios.submit(state, action);
+    const nextState = result.state;
     const occurredAt = this.now();
     save.progress = {
       ...save.progress,
+      scenarioAttempts: {
+        ...save.progress.scenarioAttempts,
+        [scenarioId]: nextState.attempts,
+      },
       scenarioStates: {
         ...save.progress.scenarioStates,
         [scenarioId]: nextState,
@@ -251,15 +267,18 @@ export class GameOrchestrator {
       currentStageId: nextState.currentStageId,
       updatedAt: occurredAt,
     };
-    return this.commit(save, [
-      {
-        type: "StageCompleted",
-        playerId: save.player.id,
-        scenarioId,
-        stageId: completedStageId,
-        occurredAt,
-      },
-    ]);
+    const events: GameEvent[] = result.completedStageId
+      ? [
+          {
+            type: "StageCompleted",
+            playerId: save.player.id,
+            scenarioId,
+            stageId: result.completedStageId,
+            occurredAt,
+          },
+        ]
+      : [];
+    return this.commit(save, events);
   }
 
   private assertActionOwnership(save: SaveData, action: PlayerAction): void {
@@ -324,6 +343,20 @@ export class GameOrchestrator {
       save.progress,
       save.session,
       this.progression.getAvailableScenarios(save.progress),
+      this.scenarios,
     );
+  }
+}
+
+function toScenarioAction(action: PlayerAction): ScenarioAction {
+  switch (action.type) {
+    case "advance":
+      return { type: "advance" };
+    case "choose":
+      return { type: "choose", responseId: action.responseId };
+    case "submit":
+      return { type: "submit", input: action.input };
+    case "reflect":
+      return { type: "reflect", response: action.response };
   }
 }

@@ -69,3 +69,28 @@ test("scenario registry rejects malformed rewards and prerequisites", () => {
     /prerequisites/i,
   );
 });
+
+test("scenario registry requires a reachable completion stage", () => {
+  const { registry } = createRegistry();
+  const missingCompletion = structuredClone(phaseFourTestScenario);
+  missingCompletion.stages = missingCompletion.stages.filter(
+    (stage) => stage.type !== "complete",
+  );
+  assert.throws(
+    () => registry.register(missingCompletion),
+    /completion stage/i,
+  );
+
+  const missingStart = structuredClone(phaseFourTestScenario);
+  missingStart.startStageId = "missing";
+  assert.throws(() => registry.register(missingStart), /Start stage/);
+});
+
+test("scenario registry rejects circular authored forward transitions", () => {
+  const { registry } = createRegistry();
+  const circular = structuredClone(phaseFourTestScenario);
+  const reward = circular.stages.find((stage) => stage.type === "reward");
+  reward.nextStageId = "reflection";
+
+  assert.throws(() => registry.register(circular), /circular/i);
+});

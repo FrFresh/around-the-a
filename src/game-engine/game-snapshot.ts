@@ -5,6 +5,11 @@ import type {
   ScenarioId,
   ScenarioState,
 } from "../types/index.ts";
+import type {
+  ScenarioContentSnapshot,
+  ScenarioEngine,
+  ScenarioStageSnapshot,
+} from "../scenario-engine/index.ts";
 
 export interface PlayerSnapshot {
   readonly id: Player["id"];
@@ -16,6 +21,8 @@ export interface GameSnapshot {
   readonly player: PlayerSnapshot;
   readonly session: Readonly<GameSession>;
   readonly scenario: Readonly<ScenarioState> | null;
+  readonly scenarioContent: Readonly<ScenarioContentSnapshot> | null;
+  readonly currentStage: Readonly<ScenarioStageSnapshot> | null;
   readonly progression: {
     readonly completedScenarioIds: readonly ScenarioId[];
     readonly unlockedScenarioIds: readonly ScenarioId[];
@@ -33,6 +40,7 @@ export function createGameSnapshot(
   progress: PlayerProgress,
   session: GameSession,
   availableScenarioIds: ScenarioId[],
+  scenarios?: ScenarioEngine,
 ): GameSnapshot {
   const scenario = session.currentScenarioId
     ? (progress.scenarioStates[session.currentScenarioId] ?? null)
@@ -41,6 +49,10 @@ export function createGameSnapshot(
     player: { id: player.id, displayName: player.displayName },
     session,
     scenario,
+    scenarioContent:
+      scenario && scenarios ? scenarios.getContentSnapshot(scenario) : null,
+    currentStage:
+      scenario && scenarios ? scenarios.getStageSnapshot(scenario) : null,
     progression: {
       completedScenarioIds: progress.completedScenarioIds,
       unlockedScenarioIds: progress.unlockedScenarioIds,
