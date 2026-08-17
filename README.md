@@ -2,21 +2,35 @@
 
 Around the A is a mobile-first, 8-bit AI literacy adventure set in Atlanta. The first playable stop, Five Points, teaches players that better questions unlock better information.
 
-## First playable flow
+## Current prototype
 
 The player arrives at Five Points, asks a weak transit question, receives a vague clue, and revises the question using four fundamentals: goal, context, constraints, and desired output. Demonstrating at least three—including the first three required dimensions—earns 100 XP, 100 A Points, the Better Questions badge, and unlocks Ponce City Market.
 
-Progress is persisted locally in the browser.
+Progress is persisted locally in the browser using versioned, validated,
+player-scoped save envelopes. Existing saves migrate forward, last-known-good
+copies support safe recovery, and saves can be exported or imported through the
+Game Manager without silently replacing another profile.
+
+Multiple travelers can create independent profiles on one device. Use the traveler control in the header to create, switch, or delete profiles; each profile keeps separate XP, A Points, skills, scenarios, inventory, and passport progress.
+
+The gameplay prototype predates the formal roadmap. Phase 0 preserves it without adding gameplay while establishing the contracts that later phases will adopt.
 
 ## Architecture
 
 ```text
-docs/                         Product and learning framework
+docs/                         Constitutional product, learning, architecture, and art systems
 src/
+  foundation/                 Composition root and manager lifecycle
+  player/                     Profiles, sessions, isolated saves, and game adapter
+  game-engine/                UI-facing GameManager and reusable composition factories
+  scenario-engine/            Phase 0 ScenarioManager contract and placeholder
+  evaluation/                 Replaceable evaluation contract
+  rewards/                    Phase 0 RewardManager contract and placeholder
+  types/                      Shared domain models and identifiers
   game/                       Engine, progression, player state, shared types
   scenarios/                  Data-driven scenario definitions
   evaluators/                 Swappable response-evaluation interface and rules
-  storage/                    Persistence interface and localStorage adapter
+  storage/                    Adapters, typed errors, validation, migrations, recovery
   components/                 Reusable game UI
   data/                       Locations and literacy skills
 app/                          Mobile-first application shell and styles
@@ -41,6 +55,9 @@ Then open the local URL shown in the terminal.
 
 ```bash
 npm test
+npm run typecheck
+npm run lint
+npm run format:check
 npm run build
 ```
 

@@ -12,7 +12,9 @@ export class GameEngine {
     this.evaluator = evaluator;
   }
 
-  load() { return this.storage.loadPlayer(); }
+  load() {
+    return this.storage.loadPlayer();
+  }
 
   async submitPlayerResponse(id: string, input: string) {
     const scenario = scenarios[id];
@@ -20,7 +22,10 @@ export class GameEngine {
     const evaluation = await this.evaluator.evaluate(input, scenario);
     const previous = this.storage.loadPlayer();
     const attempts = (previous.scenarioAttempts[id] ?? 0) + 1;
-    let player = { ...previous, scenarioAttempts: { ...previous.scenarioAttempts, [id]: attempts } };
+    let player = {
+      ...previous,
+      scenarioAttempts: { ...previous.scenarioAttempts, [id]: attempts },
+    };
     if (evaluation.passed) player = completeScenario(player, scenario);
     this.storage.savePlayer(player);
     return { evaluation, player, completed: evaluation.passed };
