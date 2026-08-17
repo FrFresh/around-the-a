@@ -24,6 +24,16 @@ export interface SubmissionResult {
   completed: boolean;
 }
 
+export interface GameHealthCheck {
+  status: "ok" | "error";
+  applicationBootSucceeded: boolean;
+  gameManagerInitialized: boolean;
+  storageAdapterAvailable: boolean;
+  scenarioRegistryValid: boolean;
+  registeredScenarioCount: number;
+  saveSchemaVersion: number;
+}
+
 export interface IGameManager extends InitializableManager {
   getSnapshot(): ApplicationSnapshot;
   getGameSnapshot(playerId: PlayerId): GameSnapshot;
@@ -34,6 +44,7 @@ export interface IGameManager extends InitializableManager {
   submitAction(playerId: PlayerId, action: PlayerAction): GameSnapshot;
   completeStage(playerId: PlayerId): GameSnapshot;
   completeScenario(playerId: PlayerId): GameSnapshot;
+  getHealthCheck(): GameHealthCheck;
   createPlayer(displayName: string): ApplicationSnapshot;
   loadPlayer(id: PlayerId): SaveData | null;
   savePlayer(save: SaveData): ApplicationSnapshot;
@@ -44,6 +55,7 @@ export interface IGameManager extends InitializableManager {
   ): ApplicationSnapshot;
   switchPlayer(id: PlayerId): ApplicationSnapshot;
   deletePlayer(id: PlayerId): ApplicationSnapshot;
+  resetPlayerProgress(id: PlayerId): ApplicationSnapshot;
   submitPlayerResponse(
     scenarioId: string,
     input: string,

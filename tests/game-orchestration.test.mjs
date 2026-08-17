@@ -87,6 +87,20 @@ test("starting a new game creates an active player-scoped scenario session", asy
   assert.equal(snapshot.scenario.status, "active");
 });
 
+test("health check exposes readiness without player data", async () => {
+  const { game } = await setup();
+
+  assert.deepEqual(game.getHealthCheck(), {
+    status: "ok",
+    applicationBootSucceeded: true,
+    gameManagerInitialized: true,
+    storageAdapterAvailable: true,
+    scenarioRegistryValid: true,
+    registeredScenarioCount: 1,
+    saveSchemaVersion: 4,
+  });
+});
+
 test("a paused game resumes at the exact scenario stage", async () => {
   const { game } = await setup();
   const playerId = game.createPlayer("Alex").activeSave.player.id;

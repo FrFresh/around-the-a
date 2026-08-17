@@ -30,6 +30,263 @@ textarea {
 button {
   color: inherit;
 }
+
+.initialization-screen,
+.diagnostic-shell {
+  min-height: 100dvh;
+  background: #101a15;
+  color: var(--paper);
+}
+
+.initialization-screen {
+  display: grid;
+  place-content: center;
+  justify-items: start;
+  gap: 16px;
+  padding: 32px;
+}
+
+.initialization-screen h1,
+.diagnostic-header h1 {
+  margin: 0;
+  color: var(--gold);
+  font:
+    900 clamp(28px, 7vw, 58px) / 0.95 Arial,
+    sans-serif;
+  letter-spacing: -2px;
+}
+
+.initialization-screen p,
+.diagnostic-header p {
+  margin: 0;
+}
+
+.initialization-screen pre {
+  max-width: min(720px, 90vw);
+  overflow: auto;
+  padding: 16px;
+  border: 2px solid #c54b37;
+  background: #2b1714;
+  color: #ffd8d0;
+  white-space: pre-wrap;
+}
+
+.initialization-screen button,
+.diagnostic-shell button {
+  border: 2px solid var(--gold);
+  background: var(--gold);
+  padding: 12px 16px;
+  box-shadow: 3px 3px 0 #000;
+  cursor: pointer;
+}
+
+.diagnostic-shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: clamp(18px, 4vw, 44px);
+}
+
+.diagnostic-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  align-items: flex-start;
+  padding-bottom: 24px;
+  border-bottom: 4px solid var(--peach);
+}
+
+.diagnostic-kicker {
+  color: var(--peach);
+  font-size: 12px;
+  letter-spacing: 3px;
+}
+
+.health-badge {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 2px solid #526159;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.health-badge span {
+  width: 10px;
+  height: 10px;
+  background: var(--gold);
+  box-shadow: 0 0 0 3px rgb(255 198 41 / 20%);
+}
+
+.health-badge.ok span {
+  background: var(--lime);
+  box-shadow: 0 0 0 3px rgb(185 219 99 / 20%);
+}
+
+.diagnostic-error {
+  display: flex;
+  gap: 12px;
+  margin: 22px 0;
+  padding: 14px;
+  border: 2px solid #e85d43;
+  background: #2b1714;
+  color: #ffd8d0;
+}
+
+.diagnostic-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px;
+  margin: 24px 0;
+  background: #34443b;
+  border: 2px solid #34443b;
+}
+
+.diagnostic-value {
+  min-width: 0;
+  padding: 14px;
+  background: #18271f;
+}
+
+.diagnostic-value span,
+.diagnostic-form label {
+  display: block;
+  margin-bottom: 7px;
+  color: #98aa9e;
+  font-size: 10px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.diagnostic-value strong {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--paper);
+  font-size: 13px;
+}
+
+.diagnostic-panel {
+  margin-top: 20px;
+  padding: 20px;
+  border: 2px solid #34443b;
+  background: #15231c;
+}
+
+.diagnostic-panel h2 {
+  margin: 0 0 18px;
+  color: var(--lime);
+  font-size: 14px;
+  letter-spacing: 2px;
+}
+
+.diagnostic-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto;
+  gap: 8px;
+}
+
+.diagnostic-form label {
+  grid-column: 1 / -1;
+}
+
+.diagnostic-form input {
+  min-width: 0;
+  border: 2px solid #526159;
+  background: #0d1712;
+  color: var(--paper);
+  padding: 12px;
+  font: inherit;
+}
+
+.profile-list,
+.command-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.profile-list button {
+  display: grid;
+  gap: 4px;
+  min-width: 180px;
+  text-align: left;
+}
+
+.profile-list button small {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.profile-list button.selected {
+  background: var(--lime);
+  border-color: var(--lime);
+}
+
+.command-grid button:disabled,
+.diagnostic-form button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.command-grid button.danger {
+  border-color: #e85d43;
+  background: #e85d43;
+  color: white;
+}
+
+.health-details ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.health-details li {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  background: #101a15;
+}
+
+.health-details li span {
+  color: var(--lime);
+}
+
+@media (max-width: 720px) {
+  .diagnostic-header,
+  .diagnostic-error {
+    flex-direction: column;
+  }
+
+  .diagnostic-grid,
+  .health-details ul {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .diagnostic-form {
+    grid-template-columns: 1fr;
+  }
+
+  .diagnostic-form label {
+    grid-column: auto;
+  }
+
+  .profile-list button,
+  .command-grid button {
+    width: 100%;
+  }
+}
+
+@media (max-width: 430px) {
+  .diagnostic-grid,
+  .health-details ul {
+    grid-template-columns: 1fr;
+  }
+}
 .game-shell {
   min-height: 100dvh;
   max-width: 1180px;

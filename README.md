@@ -52,6 +52,8 @@ npm run dev
 
 Then open the local URL shown in the terminal.
 
+The default command uses Vinext's local Node runtime so it also works on macOS versions that cannot run Cloudflare's current local Worker emulator. See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for preview and production workflows.
+
 ## Validate
 
 ```bash

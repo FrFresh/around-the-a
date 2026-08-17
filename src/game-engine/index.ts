@@ -1,5 +1,6 @@
 export type {
   ApplicationSnapshot,
+  GameHealthCheck,
   IGameManager,
   SubmissionResult,
 } from "./game-manager.interface.ts";
@@ -23,6 +24,13 @@ export {
   type ScenarioTransitionEvent,
 } from "./scenario-state-machine.ts";
 export { createBrowserGameManager } from "./create-browser-game-manager.ts";
+export {
+  initializeApplication,
+  type ApplicationInitializationError,
+  type ApplicationInitializationPhase,
+  type ApplicationInitializationResult,
+  type ApplicationInitializer,
+} from "./application-bootstrap.ts";
 export {
   createGameManager,
   type CreateGameManagerOptions,

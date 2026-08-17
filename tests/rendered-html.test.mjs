@@ -22,6 +22,7 @@ test("server-renders the Around the A application shell", async () => {
 
   const html = await response.text();
   assert.match(html, /<title>Around the A — AI Literacy Game<\/title>/i);
-  assert.match(html, /Loading Atlanta…/);
+  assert.match(html, /BOOTING/);
+  assert.doesNotMatch(html, /Loading Atlanta…/);
   assert.doesNotMatch(html, /codex-preview|Your site is taking shape/i);
 });

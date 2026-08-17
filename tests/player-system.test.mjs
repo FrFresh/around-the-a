@@ -112,3 +112,22 @@ test("mismatched IDs can never overwrite another player's save", () => {
   assert.throws(() => manager.savePlayer(invalid), /mismatched player IDs/);
   assert.equal(manager.loadPlayer(bob.player.id).player.displayName, "Bob");
 });
+
+test("resetting progress preserves the selected profile and isolates other players", () => {
+  const localStorage = new MemoryLocalStorage();
+  const manager = createTestManager(localStorage);
+  const alice = manager.createPlayer("Alice");
+  const bob = manager.createPlayer("Bob");
+  alice.progress.xp = 40;
+  manager.savePlayer(alice);
+  bob.progress.xp = 80;
+  manager.savePlayer(bob);
+
+  const reset = manager.resetPlayerProgress(alice.player.id);
+
+  assert.equal(reset.player.displayName, "Alice");
+  assert.equal(reset.progress.xp, 0);
+  assert.equal(reset.session.status, "not_started");
+  assert.equal(manager.loadPlayer(bob.player.id).progress.xp, 80);
+  assert.equal(manager.loadActivePlayer().player.id, alice.player.id);
+});
