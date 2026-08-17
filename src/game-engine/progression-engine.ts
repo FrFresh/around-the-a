@@ -78,6 +78,10 @@ export class ProgressionEngine {
       currentStageId: null,
       completedStageIds: [],
       attempts: 0,
+      attemptsByStageId: {},
+      latestEvaluation: null,
+      availableHint: null,
+      reflectionResponses: {},
     };
   }
 

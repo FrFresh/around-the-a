@@ -8,7 +8,14 @@ import {
   PlayerSaveRepository,
 } from "../player/index.ts";
 import { RewardManager } from "../rewards/index.ts";
-import { ScenarioManager } from "../scenario-engine/index.ts";
+import {
+  DeterministicTestEvaluator,
+  EvaluatorRegistry,
+  PHASE_FOUR_EVALUATOR_ID,
+  ScenarioManager,
+  ScenarioRegistry,
+  phaseFourTestScenario,
+} from "../scenario-engine/index.ts";
 import { StorageManager, type StorageService } from "../storage/index.ts";
 import { GameOrchestrator } from "./game-orchestrator.ts";
 import { GameManager } from "./game-manager.ts";
@@ -35,7 +42,14 @@ export async function createGameManager({
   const orchestrator = new GameOrchestrator(players, progression, {
     now: playerOptions?.now,
   });
-  const scenarios = new ScenarioManager();
+  const evaluatorRegistry = new EvaluatorRegistry();
+  evaluatorRegistry.register(
+    PHASE_FOUR_EVALUATOR_ID,
+    new DeterministicTestEvaluator(),
+  );
+  const scenarioRegistry = new ScenarioRegistry(evaluatorRegistry);
+  scenarioRegistry.register(phaseFourTestScenario);
+  const scenarios = new ScenarioManager(scenarioRegistry);
   const rewards = new RewardManager();
   const evaluator = new PlaceholderEvaluator();
   const game = new GameManager({

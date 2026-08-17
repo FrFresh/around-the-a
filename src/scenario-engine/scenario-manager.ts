@@ -1,12 +1,23 @@
 import { BaseManager } from "../foundation/manager.ts";
-import { FuturePhaseError } from "../foundation/phase-error.ts";
-import type { Scenario, ScenarioId } from "../types/index.ts";
+import type { ScenarioId } from "../types/index.ts";
+import { EvaluatorRegistry } from "./evaluator-registry.ts";
+import type { ScenarioDefinition } from "./scenario-definition.ts";
 import type { IScenarioManager } from "./scenario-manager.interface.ts";
+import { ScenarioRegistry } from "./scenario-registry.ts";
 
 export class ScenarioManager extends BaseManager implements IScenarioManager {
-  getScenario(_id: ScenarioId): Scenario {
-    void _id;
-    // TODO(Phase 4): Resolve data-driven scenarios from a scenario repository.
-    throw new FuturePhaseError("ScenarioManager", 4);
+  private readonly registry: ScenarioRegistry;
+
+  constructor(registry = new ScenarioRegistry(new EvaluatorRegistry())) {
+    super();
+    this.registry = registry;
+  }
+
+  getScenario(id: ScenarioId): ScenarioDefinition {
+    return this.registry.get(id);
+  }
+
+  getAllScenarios(): ScenarioDefinition[] {
+    return this.registry.getAll();
   }
 }
